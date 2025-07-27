@@ -1,0 +1,55 @@
+
+Port 5173 is in use, trying another one...
+
+  VITE v7.0.5  ready in 296 ms
+
+  ➜  Local:   http://localhost:5174/
+  ➜  Network: use --host to expose
+  ➜  press h + enter to show help
+3:53:46 PM [vite] (client) hmr update /src/components/StorySection.jsx, /src/index.css
+3:53:57 PM [vite] (client) hmr update /src/components/StorySection.jsx, /src/index.css (x2)
+3:54:00 PM [vite] (client) hmr update /src/components/Footer.jsx, /src/index.css
+3:54:04 PM [vite] (client) hmr update /src/components/Footer.jsx, /src/index.css (x2)
+3:54:20 PM [vite] (client) hmr update /src/components/StorySection.jsx, /src/index.css
+3:54:20 PM [vite] (client) hmr update /src/components/Footer.jsx, /src/index.css
+3:54:20 PM [vite] (client) hmr update /src/components/Footer.jsx, /src/index.css (x2)
+3:55:34 PM [vite] (client) hmr update /src/components/StorySection.jsx, /src/index.css
+4:03:03 PM [vite] (client) hmr update /src/components/Footer.jsx, /src/index.css
+4:03:06 PM [vite] (client) hmr update /src/components/StorySection.jsx, /src/index.css
+4:03:24 PM [vite] (client) hmr update /src/components/StorySection.jsx, /src/index.css (x2)
+4:03:24 PM [vite] (client) hmr update /src/components/Footer.jsx, /src/index.css
+4:04:46 PM [vite] (client) hmr update /src/components/ContactSection.jsx, /src/index.css
+4:05:02 PM [vite] (client) hmr update /src/components/ContactSection.jsx, /src/index.css (x2)
+4:09:11 PM [vite] (client) hmr update /src/components/OrderSection.jsx, /src/index.css
+4:09:14 PM [vite] (client) hmr update /src/components/OrderSection.jsx, /src/index.css (x2)
+4:09:59 PM [vite] (client) hmr update /src/components/OrderSection.jsx, /src/index.css (x3)
+4:11:22 PM [vite] (client) hmr update /src/components/Navbar.jsx, /src/index.css
+4:11:22 PM [vite] (client) hmr invalidate /src/components/Navbar.jsx Could not Fast Refresh ("scrollToSectio
+4:11:22 PM [vite] (client) hmr invalidate /src/components/Navbar.jsx Could not Fast Refresh ("scrollToSection" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plu
+4:11:22 PM [vite] (client) hmr invalidate /src/components/Navbar.jsx Could not Fast Refresh ("scrollToSection" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+4:11:22 PM [vite] (client) hmr update /src/components/LandingPage.jsx, /src/index.css, /src/components/Story
+4:11:22 PM [vite] (client) hmr update /src/components/LandingPage.jsx, /src/index.css, /src/components/StorySection.jsx
+4:11:29 PM [vite] (client) hmr update /src/components/Navbar.jsx, /src/index.css
+4:11:29 PM [vite] (client) hmr invalidate /src/components/Navbar.jsx Could not Fast Refresh ("scrollToSectio
+4:11:29 PM [vite] (client) hmr invalidate /src/components/Navbar.jsx Could not Fast Refresh ("scrollToSection" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plu
+4:11:29 PM [vite] (client) hmr invalidate /src/components/Navbar.jsx Could not Fast Refresh ("scrollToSection" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+4:11:29 PM [vite] (client) hmr update /src/components/LandingPage.jsx, /src/index.css, /src/components/Story
+4:11:29 PM [vite] (client) hmr update /src/components/LandingPage.jsx, /src/index.css, /src/components/StorySection.jsx
+4:12:03 PM [vite] (client) hmr update /src/components/Navbar.jsx, /src/index.css
+4:12:03 PM [vite] (client) hmr invalidate /src/components/Navbar.jsx Could not Fast Refresh ("scrollToSectio
+4:12:03 PM [vite] (client) hmr invalidate /src/components/Navbar.jsx Could not Fast Refresh ("scrollToSection" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plu
+4:12:03 PM [vite] (client) hmr invalidate /src/components/Navbar.jsx Could not Fast Refresh ("scrollToSection" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+4:12:03 PM [vite] (client) hmr update /src/components/LandingPage.jsx, /src/index.css, /src/components/Story
+4:12:03 PM [vite] (client) hmr update /src/components/LandingPage.jsx, /src/index.css, /src/components/StorySection.jsx
+4:12:04 PM [vite] (client) hmr update /src/components/Navbar.jsx, /src/index.css
+4:12:04 PM [vite] (client) hmr invalidate /src/components/Navbar.jsx Could not Fast Refresh ("scrollToSectio
+4:12:04 PM [vite] (client) hmr invalidate /src/components/Navbar.jsx Could not Fast Refresh ("scrollToSection" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plu
+4:12:04 PM [vite] (client) hmr invalidate /src/components/Navbar.jsx Could not Fast Refresh ("scrollToSection" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+4:12:04 PM [vite] (client) hmr update /src/components/LandingPage.jsx, /src/index.css, /src/components/Story
+4:12:04 PM [vite] (client) hmr update /src/components/LandingPage.jsx, /src/index.css, /src/components/StorySection.jsx
+4:12:04 PM [vite] (client) hmr update /src/components/Navbar.jsx, /src/index.css
+4:12:05 PM [vite] (client) hmr invalidate /src/components/Navbar.jsx Could not Fast Refresh ("scrollToSectio
+4:12:05 PM [vite] (client) hmr invalidate /src/components/Navbar.jsx Could not Fast Refresh ("scrollToSection" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plu
+4:12:05 PM [vite] (client) hmr invalidate /src/components/Navbar.jsx Could not Fast Refresh ("scrollToSection" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+4:12:05 PM [vite] (client) hmr update /src/components/LandingPage.jsx, /src/index.css, /src/components/Story
+4:12:05 PM [vite] (client) hmr update /src/components/LandingPage.jsx, /src/index.css, /src/components/StorySection.jsx
