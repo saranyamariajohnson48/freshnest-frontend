@@ -129,7 +129,7 @@ export default function Signup() {
       if (!res.ok) {
         setServerError(data.error || "Signup failed");
       } else {
-        alert("Signup successful!");
+        alert("Signup successful! Please check your email to verify your account.");
         navigate("/login");
       }
     } catch (err) {
@@ -250,7 +250,7 @@ export default function Signup() {
           />
           <div className="absolute inset-0 bg-black/40 rounded-r-2xl" />
           <div className="absolute bottom-0 left-0 right-0 p-8 z-10">
-            <h2 className="text-white text-2xl font-bold mb-2 drop-shadow">Keep your produce fresh, always.</h2>
+            <h2 className="text-white text-2xl font-bold mb-2 drop-shadow">Keep your products fresh, always.</h2>
             <p className="text-white text-sm">Sign up for free and enjoy access to all FreshNest features for 30 days. No credit card required.</p>
           </div>
         </div>

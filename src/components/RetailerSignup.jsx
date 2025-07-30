@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { API_BASE_URL } from "../api";
 import img1 from "../assets/img1.jpg";
 
 // Validation functions
@@ -50,32 +51,51 @@ function validateConfirmPassword(password, confirmPassword) {
   return "";
 }
 
+// Phone validation function
+function validatePhone(phone) {
+  if (!phone || phone.trim() === "") return "Phone number is required";
+  const phoneRegex = /^(\+91[6-9][0-9]{9}|[6789][0-9]{9})$/;
+  if (!phoneRegex.test(phone)) return "Enter a valid phone number";
+  
+  const repeatingDigitsRegex = /(\d)\1{9}/;
+  if (repeatingDigitsRegex.test(phone)) return "Phone number cannot contain repeating digits";
+  
+  return "";
+}
+
 export default function RetailerSignup() {
   const [form, setForm] = useState({
     fullName: "",
     email: "",
+    phone: "",
     password: "",
     confirmPassword: "",
-    terms: false
+    terms: false,
+    role: "retailer"
   });
   const [errors, setErrors] = useState({});
   const [serverError, setServerError] = useState("");
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   function handleChange(e) {
     const { name, value, type, checked } = e.target;
-    setForm({ ...form, [name]: type === "checkbox" ? checked : value });
+    setForm(f => ({
+      ...f,
+      [name]: type === "checkbox" ? checked : value,
+    }));
     setErrors({ ...errors, [name]: "" });
     setServerError("");
   }
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
     
     // Validate all fields
     const newErrors = {
       fullName: validateFullName(form.fullName),
       email: validateEmail(form.email),
+      phone: validatePhone(form.phone),
       password: validatePassword(form.password),
       confirmPassword: validateConfirmPassword(form.password, form.confirmPassword),
     };
@@ -93,8 +113,32 @@ export default function RetailerSignup() {
       return;
     }
     
-    // TODO: Implement registration logic with API call
-    alert("Retailer registration submitted!");
+    setLoading(true);
+    setServerError("");
+    try {
+      const res = await fetch(`${API_BASE_URL}/signup`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          fullName: form.fullName,
+          email: form.email, 
+          phone: form.phone,
+          password: form.password,
+          role: form.role
+        }),
+      });
+      const data = await res.json();
+      setLoading(false);
+      if (!res.ok) {
+        setServerError(data.error || "Signup failed");
+      } else {
+        alert("Registration successful! Please check your email to verify your account.");
+        navigate("/login");
+      }
+    } catch (err) {
+      setLoading(false);
+      setServerError("Server error. Please try again.");
+    }
   }
 
   return (
@@ -139,12 +183,23 @@ export default function RetailerSignup() {
               <input
                 type="email"
                 name="email"
-                placeholder="Email"
+                placeholder="Email Address"
                 className="w-full px-3 py-2 border rounded bg-white/20 border-green-300 text-white placeholder-green-200 focus:outline-none"
                 value={form.email}
                 onChange={handleChange}
               />
               {errors.email && <div className="text-red-400 text-sm mt-1">{errors.email}</div>}
+            </div>
+            <div>
+              <input
+                type="tel"
+                name="phone"
+                placeholder="Phone Number"
+                className="w-full px-3 py-2 border rounded bg-white/20 border-green-300 text-white placeholder-green-200 focus:outline-none"
+                value={form.phone}
+                onChange={handleChange}
+              />
+              {errors.phone && <div className="text-red-400 text-sm mt-1">{errors.phone}</div>}
             </div>
             <div>
               <input
@@ -180,8 +235,12 @@ export default function RetailerSignup() {
               I agree to the <a href="#" className="underline text-green-400 ml-1">Terms and Conditions</a>
             </label>
             {serverError && <div className="text-red-400 text-sm mt-1">{serverError}</div>}
-            <button type="submit" className="w-full bg-green-600 text-white py-2 rounded font-semibold hover:bg-green-700 transition">
-              Register
+            <button
+              type="submit"
+              className="w-full bg-green-600 text-white py-2 rounded font-semibold hover:bg-green-700 transition"
+              disabled={loading}
+            >
+              {loading ? "Registering..." : "Register"}
             </button>
           </form>
         </div>

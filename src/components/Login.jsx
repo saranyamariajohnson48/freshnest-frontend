@@ -61,10 +61,46 @@ const Login = () => {
       const data = await res.json();
       setLoading(false);
       if (!res.ok) {
-        setServerError(data.error || "Login failed");
+        if (data.emailNotVerified) {
+          setServerError("Please verify your email address before logging in. Check your inbox for the verification link.");
+        } else {
+          setServerError(data.error || "Login failed");
+        }
       } else {
+        console.log("Login response:", data);
+        console.log("User role:", data.user?.role);
         alert("Login successful!");
-        navigate("/");
+        // Redirect based on user role with a small delay
+        setTimeout(() => {
+          if (data.user && (data.user.role === 'admin' || data.user.role === 'Admin')) {
+            console.log("Redirecting to admin dashboard...");
+            navigate("/admin/dashboard");
+            setTimeout(() => {
+              if (window.location.pathname !== "/admin/dashboard") {
+                window.location.href = "/admin/dashboard";
+              }
+            }, 500);
+          } else if (data.user && (data.user.role === 'retailer' || data.user.role === 'Retailer')) {
+            console.log("Redirecting to retailer dashboard...");
+            navigate("/retailer/dashboard");
+            setTimeout(() => {
+              if (window.location.pathname !== "/retailer/dashboard") {
+                window.location.href = "/retailer/dashboard";
+              }
+            }, 500);
+          } else if (data.user && (data.user.role === 'user' || data.user.role === 'User')) {
+            console.log("Redirecting to user dashboard...");
+            navigate("/user/dashboard");
+            setTimeout(() => {
+              if (window.location.pathname !== "/user/dashboard") {
+                window.location.href = "/user/dashboard";
+              }
+            }, 500);
+          } else {
+            console.log("Redirecting to home...");
+            navigate("/");
+          }
+        }, 100);
       }
     } catch (err) {
       setLoading(false);
@@ -126,6 +162,15 @@ const Login = () => {
               {errors.password && <div className="text-red-400 text-sm mt-1">{errors.password}</div>}
             </div>
             {serverError && <div className="text-red-400 text-sm mt-1">{serverError}</div>}
+            <div className="flex justify-end mb-4">
+              <button
+                type="button"
+                onClick={() => navigate('/forgot-password')}
+                className="text-sm text-green-300 hover:text-green-100 transition-colors font-medium"
+              >
+                Forgot Password?
+              </button>
+            </div>
             <button type="submit" className="w-full bg-green-600 text-white py-2 rounded font-semibold hover:bg-green-700 transition" disabled={loading}>
               {loading ? "Logging in..." : "Continue"}
             </button>

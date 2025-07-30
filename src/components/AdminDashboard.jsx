@@ -1,0 +1,1736 @@
+import React, { useState, useEffect } from 'react';
+import { 
+  FiHome, 
+  FiPackage, 
+  FiUsers, 
+  FiShoppingCart, 
+  FiTruck, 
+  FiBarChart2, 
+  FiSettings, 
+  FiBell, 
+  FiLogOut,
+  FiMenu,
+  FiX,
+  FiTrendingUp,
+  FiTrendingDown,
+  FiDollarSign,
+  FiUser,
+  FiSearch,
+  FiActivity,
+  FiFilter,
+  FiDownload,
+  FiRefreshCw,
+  FiMoreVertical,
+  FiCalendar,
+  FiClock,
+  FiTarget,
+  FiAward,
+  FiAlertTriangle,
+  FiCheck,
+  FiUserCheck,
+  FiPieChart
+} from 'react-icons/fi';
+import { Line, Bar, Doughnut } from 'react-chartjs-2';
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend,
+  ArcElement,
+  Filler,
+} from 'chart.js';
+
+// Register ChartJS components
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend,
+  ArcElement,
+  Filler
+);
+
+const AdminDashboard = () => {
+  const [sidebarOpen, setSidebarOpen] = useState(false); // Start closed on mobile
+  const [activeSection, setActiveSection] = useState('dashboard');
+  const [timeRange, setTimeRange] = useState('7d');
+
+  // Handle responsive sidebar behavior
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth >= 1024) {
+        setSidebarOpen(true); // Auto-open on desktop
+      } else {
+        setSidebarOpen(false); // Auto-close on mobile
+      }
+    };
+
+    // Set initial state
+    handleResize();
+    
+    // Add event listener
+    window.addEventListener('resize', handleResize);
+    
+    // Cleanup
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // Logout handler
+  const handleLogout = () => {
+    // Clear any stored authentication data
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    // Redirect to login page
+    window.location.href = '/login';
+  };
+  
+  const [stats, setStats] = useState({
+    totalRevenue: 847250,
+    totalOrders: 2847,
+    activeCustomers: 1456,
+    inventoryValue: 125000,
+    growthRate: 12.5,
+    conversionRate: 3.2,
+    avgOrderValue: 298,
+    customerSatisfaction: 4.8
+  });
+
+  // Professional Color Palette
+  const theme = {
+    primary: '#059669', // emerald-600
+    secondary: '#10b981', // emerald-500
+    accent: '#34d399', // emerald-400
+    success: '#22c55e', // green-500
+    warning: '#f59e0b', // amber-500
+    error: '#ef4444', // red-500
+    info: '#3b82f6', // blue-500
+    gray: {
+      50: '#f9fafb',
+      100: '#f3f4f6',
+      200: '#e5e7eb',
+      300: '#d1d5db',
+      400: '#9ca3af',
+      500: '#6b7280',
+      600: '#4b5563',
+      700: '#374151',
+      800: '#1f2937',
+      900: '#111827'
+    }
+  };
+
+  // Chart Data for Revenue Trend - Exact from Your Image
+  const revenueData = {
+    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+    datasets: [
+      {
+        label: 'Revenue',
+        data: [65000, 72000, 68000, 85000, 92000, 88000, 95000, 102000, 98000, 115000, 125000, 135000],
+        borderColor: theme.primary,
+        backgroundColor: 'transparent',
+        borderWidth: 3,
+        fill: false,
+        tension: 0.4,
+        pointBackgroundColor: theme.primary,
+        pointBorderColor: '#ffffff',
+        pointBorderWidth: 2,
+        pointRadius: 5,
+        pointHoverRadius: 7,
+      },
+      {
+        label: 'Target',
+        data: [60000, 70000, 75000, 80000, 85000, 90000, 95000, 100000, 105000, 110000, 115000, 120000],
+        borderColor: theme.gray[300],
+        backgroundColor: 'transparent',
+        borderWidth: 2,
+        borderDash: [5, 5],
+        fill: false,
+        tension: 0.4,
+        pointRadius: 0,
+      }
+    ],
+  };
+
+  // Chart Data for Sales by Category (Doughnut) - Exact from Your Image
+  const categoryData = {
+    labels: ['Fresh Vegetables', 'Organic Fruits', 'Dairy Products', 'Grains & Cereals', 'Beverages'],
+    datasets: [
+      {
+        data: [35, 25, 20, 15, 5],
+        backgroundColor: [
+          '#059669', // Fresh Vegetables
+          '#10b981', // Organic Fruits  
+          '#34d399', // Dairy Products
+          '#3b82f6', // Grains & Cereals
+          '#f59e0b'  // Beverages
+        ],
+        borderWidth: 0,
+        hoverOffset: 8,
+      },
+    ],
+  };
+
+  // Weekly Orders Data (Bar Chart) - Exact from Your Image
+  const weeklyOrdersData = {
+    labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+    datasets: [
+      {
+        label: 'Orders',
+        data: [45, 52, 48, 61, 55, 67, 73],
+        backgroundColor: theme.primary,
+        borderRadius: 8,
+        borderSkipped: false,
+      },
+    ],
+  };
+
+  const menuItems = [
+    { id: 'dashboard', label: 'Dashboard', icon: FiHome, badge: null },
+    { id: 'inventory', label: 'Inventory', icon: FiPackage, badge: '23' },
+    { id: 'sales', label: 'Sales', icon: FiShoppingCart, badge: null },
+    { id: 'staff', label: 'Staff', icon: FiUsers, badge: null },
+    { id: 'suppliers', label: 'Suppliers', icon: FiTruck, badge: null },
+    { id: 'reports', label: 'Reports', icon: FiBarChart2, badge: null },
+  ];
+
+  const MetricCard = ({ title, value, change, changeType, icon: Icon, subtitle, trend }) => (
+    <div className="bg-white rounded-xl border border-gray-200 p-4 lg:p-6 hover:shadow-lg transition-all duration-200">
+      <div className="flex items-start justify-between">
+        <div className="flex-1">
+          <div className="flex items-center space-x-3 mb-4">
+            <div className={`p-2 rounded-lg ${changeType === 'positive' ? 'bg-emerald-50' : changeType === 'negative' ? 'bg-red-50' : 'bg-blue-50'}`}>
+              <Icon className={`w-5 h-5 ${changeType === 'positive' ? 'text-emerald-600' : changeType === 'negative' ? 'text-red-600' : 'text-blue-600'}`} />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-gray-600">{title}</p>
+              {subtitle && <p className="text-xs text-gray-400">{subtitle}</p>}
+            </div>
+          </div>
+          <div className="space-y-2">
+            <p className="text-2xl font-bold text-gray-900">{value}</p>
+            {change && (
+              <div className={`flex items-center space-x-1 text-sm font-medium ${
+                changeType === 'positive' ? 'text-emerald-600' : 
+                changeType === 'negative' ? 'text-red-600' : 'text-gray-600'
+              }`}>
+                {changeType === 'positive' ? (
+                  <FiTrendingUp className="w-4 h-4" />
+                ) : changeType === 'negative' ? (
+                  <FiTrendingDown className="w-4 h-4" />
+                ) : null}
+                <span>{change}</span>
+              </div>
+            )}
+          </div>
+        </div>
+        {trend && (
+          <div className="w-16 h-8">
+            <svg className="w-full h-full" viewBox="0 0 64 32">
+              <path
+                d={trend}
+                fill="none"
+                stroke={changeType === 'positive' ? theme.success : changeType === 'negative' ? theme.error : theme.info}
+                strokeWidth="2"
+                className="opacity-60"
+              />
+            </svg>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
+  const ChartCard = ({ title, subtitle, children, actions, className = "" }) => (
+    <div className={`bg-white rounded-xl border border-gray-200 ${className}`}>
+      <div className="p-4 lg:p-6 border-b border-gray-100">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div>
+            <h3 className="text-base lg:text-lg font-semibold text-gray-900">{title}</h3>
+            {subtitle && <p className="text-sm text-gray-500 mt-1">{subtitle}</p>}
+          </div>
+          {actions && (
+            <div className="flex items-center space-x-2">
+              {actions}
+            </div>
+          )}
+        </div>
+      </div>
+      <div className="p-4 lg:p-6">
+        {children}
+      </div>
+    </div>
+  );
+
+  const ActivityItem = ({ title, description, time, status, avatar }) => (
+    <div className="flex items-start space-x-3 p-4 hover:bg-gray-50 rounded-lg transition-colors">
+      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium ${
+        status === 'success' ? 'bg-emerald-100 text-emerald-700' :
+        status === 'warning' ? 'bg-amber-100 text-amber-700' :
+        status === 'error' ? 'bg-red-100 text-red-700' :
+        'bg-blue-100 text-blue-700'
+      }`}>
+        {avatar}
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium text-gray-900">{title}</p>
+        <p className="text-sm text-gray-500">{description}</p>
+        <p className="text-xs text-gray-400 mt-1">{time}</p>
+      </div>
+    </div>
+  );
+
+  const QuickAction = ({ icon: Icon, label, description, color = "gray" }) => (
+    <div className="bg-gray-900 rounded-2xl p-4 lg:p-6 hover:bg-gray-800 transition-all duration-200 cursor-pointer group">
+      <div className={`w-10 h-10 lg:w-12 lg:h-12 rounded-2xl bg-white/10 flex items-center justify-center mb-3 lg:mb-4 group-hover:bg-white/20 transition-colors`}>
+        <Icon className="w-5 h-5 lg:w-6 lg:h-6 text-white" />
+      </div>
+      <h4 className="font-medium text-white mb-2 text-sm lg:text-base">{label}</h4>
+      <p className="text-xs lg:text-sm text-gray-400">{description}</p>
+    </div>
+  );
+
+  return (
+    <div className="h-screen bg-gray-50 flex overflow-hidden">
+      {/* Mobile Overlay */}
+      {sidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+      
+      {/* Clean Sidebar - Responsive */}
+      <div className={`${
+        sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+      } lg:translate-x-0 ${
+        sidebarOpen ? 'w-64' : 'lg:w-16'
+      } fixed lg:relative inset-y-0 left-0 z-50 bg-white border-r border-gray-200 transition-all duration-300 flex flex-col flex-shrink-0`}>
+        {/* Logo Section */}
+        <div className="h-16 flex items-center px-6 border-b border-gray-100">
+          <div className="flex items-center space-x-3">
+            <div className="w-8 h-8 bg-emerald-600 rounded-lg flex items-center justify-center">
+              <span className="text-white font-bold text-sm">🌱</span>
+            </div>
+            {sidebarOpen && (
+              <span className="text-xl font-bold text-gray-900">FreshNest</span>
+            )}
+          </div>
+        </div>
+
+        {/* Menu Label */}
+        {sidebarOpen && (
+          <div className="px-6 py-4">
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">MENU</p>
+          </div>
+        )}
+
+        {/* Navigation Menu */}
+        <nav className="flex-1 px-4">
+          <div className="space-y-1">
+            {menuItems.map((item) => {
+              const Icon = item.icon;
+              const isActive = activeSection === item.id;
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => {
+                    setActiveSection(item.id);
+                    // Close sidebar on mobile after selection
+                    if (window.innerWidth < 1024) {
+                      setSidebarOpen(false);
+                    }
+                  }}
+                  className={`w-full flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-colors ${
+                    isActive
+                      ? 'bg-emerald-600 text-white'
+                      : 'text-gray-700 hover:bg-gray-100'
+                  }`}
+                >
+                  <Icon className="w-5 h-5 mr-3" />
+                  {sidebarOpen && (
+                    <>
+                      <span className="flex-1 text-left">{item.label}</span>
+                      {item.badge && (
+                        <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+                          isActive 
+                            ? 'bg-white/20 text-white' 
+                            : 'bg-gray-200 text-gray-700'
+                        }`}>
+                          {item.badge}
+                        </span>
+                      )}
+                    </>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </nav>
+
+        {/* General Section */}
+        {sidebarOpen && (
+          <div className="px-6 py-4 border-t border-gray-100">
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">GENERAL</p>
+            <div className="space-y-1">
+              <button 
+                onClick={() => {
+                  setActiveSection('notifications');
+                  if (window.innerWidth < 1024) {
+                    setSidebarOpen(false);
+                  }
+                }}
+                className={`w-full flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-colors ${
+                  activeSection === 'notifications'
+                    ? 'bg-emerald-600 text-white'
+                    : 'text-gray-700 hover:bg-gray-100'
+                }`}
+              >
+                <FiBell className="w-5 h-5 mr-3" />
+                <span className="flex-1 text-left">Notifications</span>
+                <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+                  activeSection === 'notifications' 
+                    ? 'bg-white/20 text-white' 
+                    : 'bg-red-500 text-white'
+                }`}>
+                  3
+                </span>
+              </button>
+              <button 
+                onClick={() => {
+                  setActiveSection('settings');
+                  if (window.innerWidth < 1024) {
+                    setSidebarOpen(false);
+                  }
+                }}
+                className={`w-full flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-colors ${
+                  activeSection === 'settings'
+                    ? 'bg-emerald-600 text-white'
+                    : 'text-gray-700 hover:bg-gray-100'
+                }`}
+              >
+                <FiSettings className="w-5 h-5 mr-3" />
+                <span>Settings</span>
+              </button>
+              <button 
+                onClick={handleLogout}
+                className="w-full flex items-center px-3 py-2.5 text-sm font-medium text-gray-700 hover:bg-red-50 hover:text-red-600 rounded-lg transition-colors"
+              >
+                <FiLogOut className="w-5 h-5 mr-3" />
+                <span>Logout</span>
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Main Content */}
+      <div className="flex-1 flex flex-col min-w-0">
+        {/* Header - Responsive */}
+        <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-4 lg:px-6">
+          <div className="flex items-center space-x-4">
+            <button
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              {sidebarOpen ? <FiX className="w-5 h-5" /> : <FiMenu className="w-5 h-5" />}
+            </button>
+            
+            {/* Search Bar - Hidden on mobile */}
+            <div className="relative hidden md:block">
+              <FiSearch className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
+              <input
+                type="text"
+                placeholder="Search task"
+                className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm w-64 lg:w-80 bg-gray-50"
+              />
+              <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-xs text-gray-400 bg-gray-200 px-2 py-1 rounded hidden lg:block">⌘ F</span>
+            </div>
+          </div>
+          
+          <div className="flex items-center space-x-2 lg:space-x-4">
+            {/* Search Icon for Mobile */}
+            <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors md:hidden">
+              <FiSearch className="w-5 h-5 text-gray-600" />
+            </button>
+            
+            {/* Mail Icon - Hidden on small screens */}
+            <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors hidden sm:block">
+              <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+              </svg>
+            </button>
+            
+            {/* Notification Bell */}
+            <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+              <FiBell className="w-5 h-5 text-gray-600" />
+            </button>
+
+            {/* Profile */}
+            <div className="flex items-center space-x-3">
+              <div className="w-8 h-8 bg-emerald-600 rounded-full flex items-center justify-center">
+                <span className="text-white font-medium text-xs">SM</span>
+              </div>
+              <div className="text-right hidden lg:block">
+                <p className="text-sm font-medium text-gray-900">Saranya Maria</p>
+                <p className="text-xs text-gray-500">saranyamariajohnson@mca.ajce.in</p>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        {/* Dashboard Content - Responsive */}
+        <main className="flex-1 overflow-y-auto p-4 lg:p-8 bg-gray-50">
+          {activeSection === 'dashboard' && (
+            <div className="space-y-8">
+              {/* Header Section - Responsive */}
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                <div>
+                  <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">Dashboard</h1>
+                  <p className="text-gray-600 mt-1 text-sm lg:text-base">Plan, prioritize, and accomplish your tasks with ease.</p>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <button className="bg-emerald-600 text-white px-3 lg:px-4 py-2 rounded-lg hover:bg-emerald-700 transition-colors flex items-center space-x-2 text-sm lg:text-base">
+                    <span className="text-lg">+</span>
+                    <span className="hidden sm:inline">Add Project</span>
+                    <span className="sm:hidden">Add</span>
+                  </button>
+                  <button className="border border-gray-300 text-gray-700 px-3 lg:px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors text-sm lg:text-base hidden sm:block">
+                    Import Data
+                  </button>
+                </div>
+              </div>
+
+              {/* Stats Cards - Responsive Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
+                {/* Total Revenue Card */}
+                <MetricCard
+                  title="Total Revenue"
+                  subtitle="This month"
+                  value="$847,250"
+                  change="+12.5%"
+                  changeType="positive"
+                  icon={FiDollarSign}
+                  trend="M 0 16 Q 16 8 32 12 T 64 8"
+                />
+                
+                {/* Total Orders Card */}
+                <MetricCard
+                  title="Total Orders"
+                  subtitle="This month"
+                  value="2,847"
+                  change="+8.2%"
+                  changeType="positive"
+                  icon={FiShoppingCart}
+                  trend="M 0 20 Q 16 12 32 16 T 64 10"
+                />
+                
+                {/* Active Customers Card */}
+                <MetricCard
+                  title="Active Customers"
+                  subtitle="This month"
+                  value="1,456"
+                  change="+15.3%"
+                  changeType="positive"
+                  icon={FiUsers}
+                  trend="M 0 18 Q 16 10 32 14 T 64 6"
+                />
+                
+                {/* Inventory Value Card */}
+                <MetricCard
+                  title="Inventory Value"
+                  subtitle="Current stock"
+                  value="$125,000"
+                  change="-2.1%"
+                  changeType="negative"
+                  icon={FiPackage}
+                  trend="M 0 12 Q 16 8 32 16 T 64 20"
+                />
+              </div>
+
+              {/* Charts Section - Responsive */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
+                {/* Revenue Trend Chart */}
+                <ChartCard
+                  title="Revenue Trend"
+                  subtitle="Monthly revenue vs target"
+                  className="lg:col-span-2"
+                  actions={
+                    <>
+                      <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors bg-gray-900 text-white">
+                        <FiDownload className="w-4 h-4" />
+                      </button>
+                      <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors bg-gray-900 text-white">
+                        <FiRefreshCw className="w-4 h-4" />
+                      </button>
+                    </>
+                  }
+                >
+                  <div className="h-64 lg:h-80">
+                    <Line
+                      data={revenueData}
+                      options={{
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                          legend: {
+                            position: 'bottom',
+                            align: 'start',
+                            labels: {
+                              boxWidth: 12,
+                              boxHeight: 12,
+                              usePointStyle: true,
+                              font: {
+                                size: 12,
+                                weight: '500'
+                              },
+                              padding: 20
+                            }
+                          },
+                          tooltip: {
+                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                            titleColor: 'white',
+                            bodyColor: 'white',
+                            borderColor: theme.primary,
+                            borderWidth: 1,
+                            cornerRadius: 8,
+                            displayColors: false,
+                          },
+                        },
+                        scales: {
+                          y: {
+                            beginAtZero: false,
+                            min: 40000,
+                            max: 140000,
+                            grid: {
+                              color: 'rgba(0, 0, 0, 0.05)',
+                            },
+                            ticks: {
+                              color: theme.gray[500],
+                              font: {
+                                size: window.innerWidth < 640 ? 10 : 11,
+                                weight: '500'
+                              },
+                              callback: function(value) {
+                                return '$' + (value / 1000) + 'K';
+                              }
+                            },
+                          },
+                          x: {
+                            grid: {
+                              display: false,
+                            },
+                            ticks: {
+                              color: theme.gray[500],
+                              font: {
+                                size: 11,
+                                weight: '500'
+                              }
+                            },
+                          },
+                        },
+                      }}
+                    />
+                  </div>
+                </ChartCard>
+
+                {/* Sales by Category */}
+                <ChartCard
+                  title="Sales by Category"
+                  subtitle="Product distribution"
+                >
+                  <div className="h-64 lg:h-80">
+                    <Doughnut
+                      data={categoryData}
+                      options={{
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                          legend: {
+                            position: 'bottom',
+                            labels: {
+                              padding: 20,
+                              usePointStyle: true,
+                              font: {
+                                size: 11,
+                                weight: '500'
+                              }
+                            },
+                          },
+                          tooltip: {
+                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                            titleColor: 'white',
+                            bodyColor: 'white',
+                            cornerRadius: 8,
+                            displayColors: false,
+                            callbacks: {
+                              label: function(context) {
+                                return context.label + ': ' + context.parsed + '%';
+                              }
+                            }
+                          },
+                        },
+                        cutout: '60%',
+                      }}
+                    />
+                  </div>
+                </ChartCard>
+              </div>
+
+              {/* Weekly Orders and Recent Activity - Responsive */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
+                {/* Weekly Orders Bar Chart */}
+                <ChartCard
+                  title="Weekly Orders"
+                  subtitle="Orders per day this week"
+                  className="lg:col-span-2"
+                >
+                  <div className="h-48 lg:h-64">
+                    <Bar
+                      data={weeklyOrdersData}
+                      options={{
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                          legend: {
+                            display: false,
+                          },
+                          tooltip: {
+                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                            titleColor: 'white',
+                            bodyColor: 'white',
+                            cornerRadius: 8,
+                            displayColors: false,
+                          },
+                        },
+                        scales: {
+                          y: {
+                            beginAtZero: true,
+                            max: 80,
+                            grid: {
+                              color: 'rgba(0, 0, 0, 0.05)',
+                            },
+                            ticks: {
+                              color: theme.gray[500],
+                              font: {
+                                size: 11,
+                                weight: '500'
+                              }
+                            },
+                          },
+                          x: {
+                            grid: {
+                              display: false,
+                            },
+                            ticks: {
+                              color: theme.gray[500],
+                              font: {
+                                size: 11,
+                                weight: '500'
+                              }
+                            },
+                          },
+                        },
+                      }}
+                    />
+                  </div>
+                </ChartCard>
+
+                {/* Recent Activity */}
+                <ChartCard
+                  title="Recent Activity"
+                  subtitle="Latest updates"
+                >
+                  <div className="space-y-1 max-h-48 lg:max-h-64 overflow-y-auto">
+                    <ActivityItem
+                      title="Low stock alert"
+                      description="Organic Apples running low"
+                      time="15 minutes ago"
+                      status="warning"
+                      avatar="⚠️"
+                    />
+                    <ActivityItem
+                      title="Payment processed"
+                      description="$298.50 payment confirmed"
+                      time="1 hour ago"
+                      status="success"
+                      avatar="💳"
+                    />
+                  </div>
+                </ChartCard>
+              </div>
+
+              {/* Quick Actions - Responsive */}
+              <ChartCard
+                title="Quick Actions"
+                subtitle="Frequently used operations"
+              >
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <QuickAction
+                    icon={FiPackage}
+                    label="Add new items to inventory"
+                    description=""
+                  />
+                  <QuickAction
+                    icon={FiUsers}
+                    label="View and edit team members"
+                    description=""
+                  />
+                  <QuickAction
+                    icon={FiBarChart2}
+                    label="Create detailed analytics"
+                    description=""
+                  />
+                  <QuickAction
+                    icon={FiSettings}
+                    label="Configure store preferences"
+                    description=""
+                  />
+                </div>
+              </ChartCard>
+
+              {/* Orders and Activity - Responsive */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Weekly Orders */}
+                <ChartCard
+                  title="Weekly Orders"
+                  subtitle="Orders per day this week"
+                  className="lg:col-span-2"
+                >
+                  <div className="h-64">
+                    <Bar
+                      data={weeklyOrdersData}
+                      options={{
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                          legend: {
+                            display: false,
+                          },
+                          tooltip: {
+                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                            titleColor: 'white',
+                            bodyColor: 'white',
+                            cornerRadius: 8,
+                            displayColors: false,
+                          },
+                        },
+                        scales: {
+                          y: {
+                            beginAtZero: true,
+                            grid: {
+                              color: 'rgba(0, 0, 0, 0.05)',
+                            },
+                            ticks: {
+                              color: theme.gray[500],
+                              font: {
+                                size: 11,
+                                weight: '500'
+                              }
+                            },
+                          },
+                          x: {
+                            grid: {
+                              display: false,
+                            },
+                            ticks: {
+                              color: theme.gray[500],
+                              font: {
+                                size: 11,
+                                weight: '500'
+                              }
+                            },
+                          },
+                        },
+                      }}
+                    />
+                  </div>
+                </ChartCard>
+
+                {/* Recent Activity */}
+                <ChartCard
+                  title="Recent Activity"
+                  subtitle="Latest updates"
+                >
+                  <div className="space-y-1 max-h-64 overflow-y-auto">
+                    <ActivityItem
+                      title="New order received"
+                      description="Order #2847 from John Doe"
+                      time="2 minutes ago"
+                      status="success"
+                      avatar="JD"
+                    />
+                    <ActivityItem
+                      title="Low stock alert"
+                      description="Organic Apples running low"
+                      time="15 minutes ago"
+                      status="warning"
+                      avatar="⚠️"
+                    />
+                    <ActivityItem
+                      title="Payment processed"
+                      description="$298.50 payment confirmed"
+                      time="1 hour ago"
+                      status="success"
+                      avatar="💳"
+                    />
+                    <ActivityItem
+                      title="New customer registered"
+                      description="Sarah Wilson joined"
+                      time="2 hours ago"
+                      status="info"
+                      avatar="SW"
+                    />
+                    <ActivityItem
+                      title="Supplier delivery"
+                      description="Fresh vegetables restocked"
+                      time="3 hours ago"
+                      status="success"
+                      avatar="🚚"
+                    />
+                  </div>
+                </ChartCard>
+              </div>
+            </div>
+          )}
+
+          {/* Inventory Section */}
+          {activeSection === 'inventory' && (
+            <div className="space-y-6 lg:space-y-8">
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                <div>
+                  <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">Inventory Management</h1>
+                  <p className="text-gray-600 mt-1 text-sm lg:text-base">Manage your products, stock levels, and inventory operations.</p>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <button className="bg-emerald-600 text-white px-3 lg:px-4 py-2 rounded-lg hover:bg-emerald-700 transition-colors flex items-center space-x-2 text-sm lg:text-base">
+                    <span className="text-lg">+</span>
+                    <span className="hidden sm:inline">Add Product</span>
+                    <span className="sm:hidden">Add</span>
+                  </button>
+                  <button className="border border-gray-300 text-gray-700 px-3 lg:px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors text-sm lg:text-base hidden sm:block">
+                    Import CSV
+                  </button>
+                </div>
+              </div>
+              
+              {/* Stats Cards Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
+                <div className="bg-white rounded-xl border border-gray-200 p-4 lg:p-6">
+                  <div className="flex items-center space-x-3 mb-4">
+                    <div className="p-2 rounded-lg bg-emerald-50">
+                      <FiPackage className="w-5 h-5 text-emerald-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-600">Total Products</p>
+                    </div>
+                  </div>
+                  <p className="text-xl lg:text-2xl font-bold text-gray-900">1,247</p>
+                  <p className="text-sm text-emerald-600 font-medium">+12 this week</p>
+                </div>
+                
+                <div className="bg-white rounded-xl border border-gray-200 p-4 lg:p-6">
+                  <div className="flex items-center space-x-3 mb-4">
+                    <div className="p-2 rounded-lg bg-amber-50">
+                      <FiAlertTriangle className="w-5 h-5 text-amber-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-600">Low Stock</p>
+                    </div>
+                  </div>
+                  <p className="text-xl lg:text-2xl font-bold text-gray-900">23</p>
+                  <p className="text-sm text-amber-600 font-medium">Needs attention</p>
+                </div>
+                
+                <div className="bg-white rounded-xl border border-gray-200 p-4 lg:p-6">
+                  <div className="flex items-center space-x-3 mb-4">
+                    <div className="p-2 rounded-lg bg-red-50">
+                      <FiX className="w-5 h-5 text-red-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-600">Out of Stock</p>
+                    </div>
+                  </div>
+                  <p className="text-xl lg:text-2xl font-bold text-gray-900">5</p>
+                  <p className="text-sm text-red-600 font-medium">Urgent restock</p>
+                </div>
+                
+                <div className="bg-white rounded-xl border border-gray-200 p-4 lg:p-6">
+                  <div className="flex items-center space-x-3 mb-4">
+                    <div className="p-2 rounded-lg bg-blue-50">
+                      <FiDollarSign className="w-5 h-5 text-blue-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-600">Inventory Value</p>
+                    </div>
+                  </div>
+                  <p className="text-xl lg:text-2xl font-bold text-gray-900">$125K</p>
+                  <p className="text-sm text-blue-600 font-medium">+5.2% from last month</p>
+                </div>
+              </div>
+
+              {/* Inventory Table */}
+              <div className="bg-white rounded-xl border border-gray-200">
+                <div className="p-4 lg:p-6 border-b border-gray-100">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <h3 className="text-base lg:text-lg font-semibold text-gray-900">Recent Products</h3>
+                    <div className="flex items-center space-x-2">
+                      <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                        <FiFilter className="w-4 h-4 text-gray-500" />
+                      </button>
+                      <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors hidden sm:block">
+                        <FiDownload className="w-4 h-4 text-gray-500" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+                <div className="p-4 lg:p-6">
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-b border-gray-100">
+                          <th className="text-left py-3 px-4 font-medium text-gray-600">Product</th>
+                          <th className="text-left py-3 px-4 font-medium text-gray-600">Category</th>
+                          <th className="text-left py-3 px-4 font-medium text-gray-600">Stock</th>
+                          <th className="text-left py-3 px-4 font-medium text-gray-600">Price</th>
+                          <th className="text-left py-3 px-4 font-medium text-gray-600">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr className="border-b border-gray-50">
+                          <td className="py-3 px-4">
+                            <div className="flex items-center space-x-3">
+                              <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                                <span className="text-green-600 font-medium">🥬</span>
+                              </div>
+                              <div>
+                                <p className="font-medium text-gray-900">Organic Lettuce</p>
+                                <p className="text-sm text-gray-500">Fresh vegetables</p>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="py-3 px-4 text-gray-600">Vegetables</td>
+                          <td className="py-3 px-4 text-gray-600">45 units</td>
+                          <td className="py-3 px-4 text-gray-600">$2.99</td>
+                          <td className="py-3 px-4">
+                            <span className="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">In Stock</span>
+                          </td>
+                        </tr>
+                        <tr className="border-b border-gray-50">
+                          <td className="py-3 px-4">
+                            <div className="flex items-center space-x-3">
+                              <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
+                                <span className="text-red-600 font-medium">🍎</span>
+                              </div>
+                              <div>
+                                <p className="font-medium text-gray-900">Organic Apples</p>
+                                <p className="text-sm text-gray-500">Fresh fruits</p>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="py-3 px-4 text-gray-600">Fruits</td>
+                          <td className="py-3 px-4 text-gray-600">5 units</td>
+                          <td className="py-3 px-4 text-gray-600">$4.99</td>
+                          <td className="py-3 px-4">
+                            <span className="px-2 py-1 bg-amber-100 text-amber-700 rounded-full text-xs font-medium">Low Stock</span>
+                          </td>
+                        </tr>
+                        <tr className="border-b border-gray-50">
+                          <td className="py-3 px-4">
+                            <div className="flex items-center space-x-3">
+                              <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                                <span className="text-blue-600 font-medium">🥛</span>
+                              </div>
+                              <div>
+                                <p className="font-medium text-gray-900">Organic Milk</p>
+                                <p className="text-sm text-gray-500">Dairy products</p>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="py-3 px-4 text-gray-600">Dairy</td>
+                          <td className="py-3 px-4 text-gray-600">0 units</td>
+                          <td className="py-3 px-4 text-gray-600">$3.49</td>
+                          <td className="py-3 px-4">
+                            <span className="px-2 py-1 bg-red-100 text-red-700 rounded-full text-xs font-medium">Out of Stock</span>
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Sales Section */}
+          {activeSection === 'sales' && (
+            <div className="space-y-6 lg:space-y-8">
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                <div>
+                  <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">Sales Management</h1>
+                  <p className="text-gray-600 mt-1 text-sm lg:text-base">Track orders, manage transactions, and analyze sales performance.</p>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <button className="bg-emerald-600 text-white px-3 lg:px-4 py-2 rounded-lg hover:bg-emerald-700 transition-colors text-sm lg:text-base">
+                    <span className="hidden sm:inline">New Order</span>
+                    <span className="sm:hidden">New</span>
+                  </button>
+                  <button className="border border-gray-300 text-gray-700 px-3 lg:px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors text-sm lg:text-base hidden sm:block">
+                    Export Data
+                  </button>
+                </div>
+              </div>
+              
+              {/* Sales Stats Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
+                <div className="bg-white rounded-xl border border-gray-200 p-4 lg:p-6">
+                  <div className="flex items-center space-x-3 mb-4">
+                    <div className="p-2 rounded-lg bg-emerald-50">
+                      <FiShoppingCart className="w-5 h-5 text-emerald-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-600">Total Orders</p>
+                    </div>
+                  </div>
+                  <p className="text-xl lg:text-2xl font-bold text-gray-900">2,847</p>
+                  <p className="text-sm text-emerald-600 font-medium">+8.2% from last month</p>
+                </div>
+                
+                <div className="bg-white rounded-xl border border-gray-200 p-4 lg:p-6">
+                  <div className="flex items-center space-x-3 mb-4">
+                    <div className="p-2 rounded-lg bg-blue-50">
+                      <FiClock className="w-5 h-5 text-blue-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-600">Pending Orders</p>
+                    </div>
+                  </div>
+                  <p className="text-xl lg:text-2xl font-bold text-gray-900">156</p>
+                  <p className="text-sm text-blue-600 font-medium">Awaiting processing</p>
+                </div>
+                
+                <div className="bg-white rounded-xl border border-gray-200 p-4 lg:p-6">
+                  <div className="flex items-center space-x-3 mb-4">
+                    <div className="p-2 rounded-lg bg-green-50">
+                      <FiDollarSign className="w-5 h-5 text-green-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-600">Total Revenue</p>
+                    </div>
+                  </div>
+                  <p className="text-xl lg:text-2xl font-bold text-gray-900">$847K</p>
+                  <p className="text-sm text-green-600 font-medium">+12.5% growth</p>
+                </div>
+                
+                <div className="bg-white rounded-xl border border-gray-200 p-4 lg:p-6">
+                  <div className="flex items-center space-x-3 mb-4">
+                    <div className="p-2 rounded-lg bg-purple-50">
+                      <FiTrendingUp className="w-5 h-5 text-purple-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-600">Avg Order Value</p>
+                    </div>
+                  </div>
+                  <p className="text-xl lg:text-2xl font-bold text-gray-900">$298</p>
+                  <p className="text-sm text-purple-600 font-medium">+3.2% increase</p>
+                </div>
+              </div>
+
+              {/* Recent Orders Table */}
+              <div className="bg-white rounded-xl border border-gray-200">
+                <div className="p-4 lg:p-6 border-b border-gray-100">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <h3 className="text-base lg:text-lg font-semibold text-gray-900">Recent Orders</h3>
+                    <div className="flex items-center space-x-2">
+                      <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                        <FiFilter className="w-4 h-4 text-gray-500" />
+                      </button>
+                      <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors hidden sm:block">
+                        <FiRefreshCw className="w-4 h-4 text-gray-500" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+                <div className="p-4 lg:p-6">
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-b border-gray-100">
+                          <th className="text-left py-3 px-4 font-medium text-gray-600">Order ID</th>
+                          <th className="text-left py-3 px-4 font-medium text-gray-600">Customer</th>
+                          <th className="text-left py-3 px-4 font-medium text-gray-600">Items</th>
+                          <th className="text-left py-3 px-4 font-medium text-gray-600">Total</th>
+                          <th className="text-left py-3 px-4 font-medium text-gray-600">Status</th>
+                          <th className="text-left py-3 px-4 font-medium text-gray-600">Date</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr className="border-b border-gray-50">
+                          <td className="py-3 px-4">
+                            <span className="font-medium text-gray-900">#2847</span>
+                          </td>
+                          <td className="py-3 px-4">
+                            <div className="flex items-center space-x-3">
+                              <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                                <span className="text-blue-600 font-medium text-xs">JD</span>
+                              </div>
+                              <div>
+                                <p className="font-medium text-gray-900">John Doe</p>
+                                <p className="text-sm text-gray-500">john@example.com</p>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="py-3 px-4 text-gray-600">5 items</td>
+                          <td className="py-3 px-4 font-medium text-gray-900">$298.50</td>
+                          <td className="py-3 px-4">
+                            <span className="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">Completed</span>
+                          </td>
+                          <td className="py-3 px-4 text-gray-600">2 min ago</td>
+                        </tr>
+                        <tr className="border-b border-gray-50">
+                          <td className="py-3 px-4">
+                            <span className="font-medium text-gray-900">#2846</span>
+                          </td>
+                          <td className="py-3 px-4">
+                            <div className="flex items-center space-x-3">
+                              <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center">
+                                <span className="text-purple-600 font-medium text-xs">SW</span>
+                              </div>
+                              <div>
+                                <p className="font-medium text-gray-900">Sarah Wilson</p>
+                                <p className="text-sm text-gray-500">sarah@example.com</p>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="py-3 px-4 text-gray-600">3 items</td>
+                          <td className="py-3 px-4 font-medium text-gray-900">$156.75</td>
+                          <td className="py-3 px-4">
+                            <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">Processing</span>
+                          </td>
+                          <td className="py-3 px-4 text-gray-600">15 min ago</td>
+                        </tr>
+                        <tr className="border-b border-gray-50">
+                          <td className="py-3 px-4">
+                            <span className="font-medium text-gray-900">#2845</span>
+                          </td>
+                          <td className="py-3 px-4">
+                            <div className="flex items-center space-x-3">
+                              <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+                                <span className="text-green-600 font-medium text-xs">MB</span>
+                              </div>
+                              <div>
+                                <p className="font-medium text-gray-900">Mike Brown</p>
+                                <p className="text-sm text-gray-500">mike@example.com</p>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="py-3 px-4 text-gray-600">8 items</td>
+                          <td className="py-3 px-4 font-medium text-gray-900">$425.20</td>
+                          <td className="py-3 px-4">
+                            <span className="px-2 py-1 bg-amber-100 text-amber-700 rounded-full text-xs font-medium">Pending</span>
+                          </td>
+                          <td className="py-3 px-4 text-gray-600">1 hour ago</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeSection === 'staff' && (
+            <div className="space-y-8">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h1 className="text-3xl font-bold text-gray-900">Staff Management</h1>
+                  <p className="text-gray-600 mt-1">Manage team members, roles, and permissions.</p>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <button className="bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700 transition-colors flex items-center space-x-2">
+                    <span className="text-lg">+</span>
+                    <span>Add Staff</span>
+                  </button>
+                </div>
+              </div>
+              
+              <div className="bg-white rounded-2xl border border-gray-200 p-8 text-center">
+                <FiUsers className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-xl font-semibold text-gray-900 mb-2">Staff Module</h3>
+                <p className="text-gray-500 mb-6">Employee management and scheduling tools coming soon.</p>
+                <div className="flex items-center justify-center space-x-4">
+                  <div className="text-center">
+                    <p className="text-2xl font-bold text-emerald-600">12</p>
+                    <p className="text-sm text-gray-500">Total Staff</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-2xl font-bold text-green-600">8</p>
+                    <p className="text-sm text-gray-500">Active Today</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-2xl font-bold text-blue-600">3</p>
+                    <p className="text-sm text-gray-500">Departments</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeSection === 'suppliers' && (
+            <div className="space-y-8">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h1 className="text-3xl font-bold text-gray-900">Supplier Management</h1>
+                  <p className="text-gray-600 mt-1">Manage suppliers, purchase orders, and vendor relationships.</p>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <button className="bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700 transition-colors flex items-center space-x-2">
+                    <span className="text-lg">+</span>
+                    <span>Add Supplier</span>
+                  </button>
+                </div>
+              </div>
+              
+              <div className="bg-white rounded-2xl border border-gray-200 p-8 text-center">
+                <FiTruck className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-xl font-semibold text-gray-900 mb-2">Supplier Module</h3>
+                <p className="text-gray-500 mb-6">Vendor management and procurement tools coming soon.</p>
+                <div className="flex items-center justify-center space-x-4">
+                  <div className="text-center">
+                    <p className="text-2xl font-bold text-emerald-600">24</p>
+                    <p className="text-sm text-gray-500">Active Suppliers</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-2xl font-bold text-blue-600">8</p>
+                    <p className="text-sm text-gray-500">Pending Orders</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-2xl font-bold text-green-600">$125K</p>
+                    <p className="text-sm text-gray-500">Monthly Spend</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeSection === 'reports' && (
+            <div className="space-y-8">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h1 className="text-3xl font-bold text-gray-900">Reports & Analytics</h1>
+                  <p className="text-gray-600 mt-1">Generate detailed reports and analyze business performance.</p>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <button className="bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700 transition-colors">
+                    Generate Report
+                  </button>
+                  <button className="border border-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors">
+                    Export PDF
+                  </button>
+                </div>
+              </div>
+              
+              <div className="bg-white rounded-2xl border border-gray-200 p-8 text-center">
+                <FiBarChart2 className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-xl font-semibold text-gray-900 mb-2">Reports Module</h3>
+                <p className="text-gray-500 mb-6">Advanced reporting and analytics tools coming soon.</p>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="text-center p-4 bg-gray-50 rounded-lg">
+                    <p className="text-lg font-bold text-emerald-600">Sales</p>
+                    <p className="text-xs text-gray-500">Reports</p>
+                  </div>
+                  <div className="text-center p-4 bg-gray-50 rounded-lg">
+                    <p className="text-lg font-bold text-blue-600">Inventory</p>
+                    <p className="text-xs text-gray-500">Reports</p>
+                  </div>
+                  <div className="text-center p-4 bg-gray-50 rounded-lg">
+                    <p className="text-lg font-bold text-purple-600">Financial</p>
+                    <p className="text-xs text-gray-500">Reports</p>
+                  </div>
+                  <div className="text-center p-4 bg-gray-50 rounded-lg">
+                    <p className="text-lg font-bold text-orange-600">Custom</p>
+                    <p className="text-xs text-gray-500">Reports</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeSection === 'notifications' && (
+            <div className="space-y-8">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h1 className="text-3xl font-bold text-gray-900">Notifications</h1>
+                  <p className="text-gray-600 mt-1">Manage system alerts, messages, and notification preferences.</p>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <button className="bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700 transition-colors">
+                    Mark All Read
+                  </button>
+                </div>
+              </div>
+              
+              <div className="bg-white rounded-2xl border border-gray-200 p-8">
+                <div className="space-y-4">
+                  <div className="flex items-start space-x-4 p-4 bg-red-50 rounded-lg border-l-4 border-red-500">
+                    <FiAlertTriangle className="w-5 h-5 text-red-500 mt-0.5" />
+                    <div>
+                      <h4 className="font-medium text-red-900">Low Stock Alert</h4>
+                      <p className="text-sm text-red-700">Organic Apples are running low (5 units remaining)</p>
+                      <p className="text-xs text-red-600 mt-1">15 minutes ago</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start space-x-4 p-4 bg-green-50 rounded-lg border-l-4 border-green-500">
+                    <FiShoppingCart className="w-5 h-5 text-green-500 mt-0.5" />
+                    <div>
+                      <h4 className="font-medium text-green-900">New Order Received</h4>
+                      <p className="text-sm text-green-700">Order #2847 from John Doe ($298.50)</p>
+                      <p className="text-xs text-green-600 mt-1">1 hour ago</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start space-x-4 p-4 bg-blue-50 rounded-lg border-l-4 border-blue-500">
+                    <FiTruck className="w-5 h-5 text-blue-500 mt-0.5" />
+                    <div>
+                      <h4 className="font-medium text-blue-900">Supplier Delivery</h4>
+                      <p className="text-sm text-blue-700">Fresh vegetables delivery completed</p>
+                      <p className="text-xs text-blue-600 mt-1">3 hours ago</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Settings Section */}
+          {activeSection === 'settings' && (
+            <div className="space-y-6 lg:space-y-8">
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                <div>
+                  <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">Settings</h1>
+                  <p className="text-gray-600 mt-1 text-sm lg:text-base">Configure system preferences and account settings.</p>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
+                <div className="bg-white rounded-2xl border border-gray-200 p-4 lg:p-6">
+                  <h3 className="text-base lg:text-lg font-semibold text-gray-900 mb-4">Store Settings</h3>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Store Name</label>
+                      <input type="text" defaultValue="FreshNest" className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm lg:text-base" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Store Email</label>
+                      <input type="email" defaultValue="admin@freshnest.com" className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm lg:text-base" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Currency</label>
+                      <select className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm lg:text-base">
+                        <option>USD ($)</option>
+                        <option>EUR (€)</option>
+                        <option>GBP (£)</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="bg-white rounded-2xl border border-gray-200 p-4 lg:p-6">
+                  <h3 className="text-base lg:text-lg font-semibold text-gray-900 mb-4">Notification Settings</h3>
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium text-gray-700">Email Notifications</span>
+                      <input type="checkbox" className="rounded" defaultChecked />
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium text-gray-700">Low Stock Alerts</span>
+                      <input type="checkbox" className="rounded" defaultChecked />
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium text-gray-700">Order Notifications</span>
+                      <input type="checkbox" className="rounded" defaultChecked />
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium text-gray-700">Weekly Reports</span>
+                      <input type="checkbox" className="rounded" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Suppliers Section */}
+          {activeSection === 'suppliers' && (
+            <div className="space-y-6 lg:space-y-8">
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                <div>
+                  <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">Suppliers Management</h1>
+                  <p className="text-gray-600 mt-1 text-sm lg:text-base">Manage supplier relationships and procurement.</p>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <button className="bg-emerald-600 text-white px-3 lg:px-4 py-2 rounded-lg hover:bg-emerald-700 transition-colors text-sm lg:text-base">
+                    <span className="hidden sm:inline">Add Supplier</span>
+                    <span className="sm:hidden">Add</span>
+                  </button>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6">
+                <div className="bg-white rounded-xl border border-gray-200 p-4 lg:p-6">
+                  <div className="flex items-center space-x-3 mb-4">
+                    <div className="p-2 rounded-lg bg-blue-50">
+                      <FiTruck className="w-5 h-5 text-blue-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-600">Active Suppliers</p>
+                    </div>
+                  </div>
+                  <p className="text-xl lg:text-2xl font-bold text-gray-900">24</p>
+                  <p className="text-sm text-blue-600 font-medium">+2 this month</p>
+                </div>
+                
+                <div className="bg-white rounded-xl border border-gray-200 p-4 lg:p-6">
+                  <div className="flex items-center space-x-3 mb-4">
+                    <div className="p-2 rounded-lg bg-green-50">
+                      <FiCheck className="w-5 h-5 text-green-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-600">Deliveries This Week</p>
+                    </div>
+                  </div>
+                  <p className="text-xl lg:text-2xl font-bold text-gray-900">18</p>
+                  <p className="text-sm text-green-600 font-medium">On schedule</p>
+                </div>
+                
+                <div className="bg-white rounded-xl border border-gray-200 p-4 lg:p-6">
+                  <div className="flex items-center space-x-3 mb-4">
+                    <div className="p-2 rounded-lg bg-purple-50">
+                      <FiDollarSign className="w-5 h-5 text-purple-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-600">Total Spend</p>
+                    </div>
+                  </div>
+                  <p className="text-xl lg:text-2xl font-bold text-gray-900">$45.2K</p>
+                  <p className="text-sm text-purple-600 font-medium">This month</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Staff Section */}
+          {activeSection === 'staff' && (
+            <div className="space-y-6 lg:space-y-8">
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                <div>
+                  <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">Staff Management</h1>
+                  <p className="text-gray-600 mt-1 text-sm lg:text-base">Manage team members, roles, and permissions.</p>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <button className="bg-emerald-600 text-white px-3 lg:px-4 py-2 rounded-lg hover:bg-emerald-700 transition-colors text-sm lg:text-base">
+                    <span className="hidden sm:inline">Add Staff</span>
+                    <span className="sm:hidden">Add</span>
+                  </button>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
+                <div className="bg-white rounded-xl border border-gray-200 p-4 lg:p-6">
+                  <div className="flex items-center space-x-3 mb-4">
+                    <div className="p-2 rounded-lg bg-blue-50">
+                      <FiUsers className="w-5 h-5 text-blue-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-600">Total Staff</p>
+                    </div>
+                  </div>
+                  <p className="text-xl lg:text-2xl font-bold text-gray-900">12</p>
+                  <p className="text-sm text-blue-600 font-medium">Active members</p>
+                </div>
+                
+                <div className="bg-white rounded-xl border border-gray-200 p-4 lg:p-6">
+                  <div className="flex items-center space-x-3 mb-4">
+                    <div className="p-2 rounded-lg bg-green-50">
+                      <FiUserCheck className="w-5 h-5 text-green-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-600">Online Now</p>
+                    </div>
+                  </div>
+                  <p className="text-xl lg:text-2xl font-bold text-gray-900">8</p>
+                  <p className="text-sm text-green-600 font-medium">Currently working</p>
+                </div>
+                
+                <div className="bg-white rounded-xl border border-gray-200 p-4 lg:p-6">
+                  <div className="flex items-center space-x-3 mb-4">
+                    <div className="p-2 rounded-lg bg-yellow-50">
+                      <FiClock className="w-5 h-5 text-yellow-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-600">Hours This Week</p>
+                    </div>
+                  </div>
+                  <p className="text-xl lg:text-2xl font-bold text-gray-900">324</p>
+                  <p className="text-sm text-yellow-600 font-medium">Total logged</p>
+                </div>
+                
+                <div className="bg-white rounded-xl border border-gray-200 p-4 lg:p-6">
+                  <div className="flex items-center space-x-3 mb-4">
+                    <div className="p-2 rounded-lg bg-purple-50">
+                      <FiAward className="w-5 h-5 text-purple-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-600">Performance</p>
+                    </div>
+                  </div>
+                  <p className="text-xl lg:text-2xl font-bold text-gray-900">94%</p>
+                  <p className="text-sm text-purple-600 font-medium">Average rating</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Reports Section */}
+          {activeSection === 'reports' && (
+            <div className="space-y-6 lg:space-y-8">
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                <div>
+                  <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">Reports & Analytics</h1>
+                  <p className="text-gray-600 mt-1 text-sm lg:text-base">Generate insights and track business performance.</p>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <button className="bg-emerald-600 text-white px-3 lg:px-4 py-2 rounded-lg hover:bg-emerald-700 transition-colors text-sm lg:text-base">
+                    <span className="hidden sm:inline">Generate Report</span>
+                    <span className="sm:hidden">Generate</span>
+                  </button>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6">
+                <div className="bg-white rounded-xl border border-gray-200 p-4 lg:p-6">
+                  <div className="flex items-center space-x-3 mb-4">
+                    <div className="p-2 rounded-lg bg-blue-50">
+                      <FiBarChart2 className="w-5 h-5 text-blue-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-600">Sales Reports</p>
+                    </div>
+                  </div>
+                  <p className="text-xl lg:text-2xl font-bold text-gray-900">15</p>
+                  <p className="text-sm text-blue-600 font-medium">Generated this month</p>
+                </div>
+                
+                <div className="bg-white rounded-xl border border-gray-200 p-4 lg:p-6">
+                  <div className="flex items-center space-x-3 mb-4">
+                    <div className="p-2 rounded-lg bg-green-50">
+                      <FiTrendingUp className="w-5 h-5 text-green-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-600">Growth Rate</p>
+                    </div>
+                  </div>
+                  <p className="text-xl lg:text-2xl font-bold text-gray-900">+12.5%</p>
+                  <p className="text-sm text-green-600 font-medium">Month over month</p>
+                </div>
+                
+                <div className="bg-white rounded-xl border border-gray-200 p-4 lg:p-6">
+                  <div className="flex items-center space-x-3 mb-4">
+                    <div className="p-2 rounded-lg bg-purple-50">
+                      <FiPieChart className="w-5 h-5 text-purple-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-600">Data Points</p>
+                    </div>
+                  </div>
+                  <p className="text-xl lg:text-2xl font-bold text-gray-900">2.4M</p>
+                  <p className="text-sm text-purple-600 font-medium">Analyzed</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Notifications Section */}
+          {activeSection === 'notifications' && (
+            <div className="space-y-6 lg:space-y-8">
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                <div>
+                  <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">Notifications</h1>
+                  <p className="text-gray-600 mt-1 text-sm lg:text-base">Stay updated with system alerts and messages.</p>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <button className="border border-gray-300 text-gray-700 px-3 lg:px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors text-sm lg:text-base">
+                    <span className="hidden sm:inline">Mark All Read</span>
+                    <span className="sm:hidden">Mark Read</span>
+                  </button>
+                </div>
+              </div>
+              
+              <div className="bg-white rounded-xl border border-gray-200">
+                <div className="p-4 lg:p-6">
+                  <div className="space-y-4">
+                    <div className="flex items-start space-x-3 p-3 bg-blue-50 rounded-lg">
+                      <div className="w-2 h-2 bg-blue-500 rounded-full mt-2"></div>
+                      <div className="flex-1">
+                        <p className="font-medium text-gray-900 text-sm lg:text-base">New order received</p>
+                        <p className="text-sm text-gray-600">Order #2847 from John Doe - $45.99</p>
+                        <p className="text-xs text-gray-500 mt-1">2 minutes ago</p>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-start space-x-3 p-3 bg-amber-50 rounded-lg">
+                      <div className="w-2 h-2 bg-amber-500 rounded-full mt-2"></div>
+                      <div className="flex-1">
+                        <p className="font-medium text-gray-900 text-sm lg:text-base">Low stock alert</p>
+                        <p className="text-sm text-gray-600">Organic Apples - Only 5 units remaining</p>
+                        <p className="text-xs text-gray-500 mt-1">15 minutes ago</p>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-start space-x-3 p-3 bg-green-50 rounded-lg">
+                      <div className="w-2 h-2 bg-green-500 rounded-full mt-2"></div>
+                      <div className="flex-1">
+                        <p className="font-medium text-gray-900 text-sm lg:text-base">Payment processed</p>
+                        <p className="text-sm text-gray-600">$298.50 payment confirmed for order #2846</p>
+                        <p className="text-xs text-gray-500 mt-1">1 hour ago</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Fallback for any other sections */}
+          {!['dashboard', 'inventory', 'sales', 'staff', 'suppliers', 'reports', 'notifications', 'settings'].includes(activeSection) && (
+            <div className="flex items-center justify-center h-full">
+              <div className="text-center">
+                <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <FiPackage className="w-12 h-12 text-gray-400" />
+                </div>
+                <h3 className="text-xl font-semibold text-gray-900 mb-2 capitalize">
+                  {activeSection.replace('-', ' ')} Section
+                </h3>
+                <p className="text-gray-500 mb-6 max-w-sm">
+                  This section is under development. Advanced features coming soon.
+                </p>
+                <button className="bg-emerald-600 text-white px-6 py-2 rounded-lg hover:bg-emerald-700 transition-colors font-medium">
+                  Learn More
+                </button>
+              </div>
+            </div>
+          )}
+        </main>
+      </div>
+
+    </div>
+  );
+};
+
+export default AdminDashboard;
