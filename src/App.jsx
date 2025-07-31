@@ -11,6 +11,7 @@ import ContactSection from './components/ContactSection';
 import RetailerSignup from './components/RetailerSignup';
 import AdminDashboard from './components/AdminDashboard';
 import UserDashboard from './components/UserDashboard';
+import AuthMiddleware from './components/AuthMiddleware';
 
 import AdminTestPage from './components/AdminTestPage';
 import ForgotPassword from './components/ForgotPassword';
@@ -44,9 +45,21 @@ export default function App() {
         <Route path="/retailer-signup" element={<RetailerSignup />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
-        <Route path="/admin/dashboard" element={<AdminDashboard />} />
-        <Route path="/user/dashboard" element={<UserDashboard />} />
-        <Route path="/retailer/dashboard" element={<RetailerDashboard user={user} onLogout={handleLogout} />} />
+        <Route path="/admin/dashboard" element={
+          <AuthMiddleware requiredRole="admin">
+            <AdminDashboard />
+          </AuthMiddleware>
+        } />
+        <Route path="/user/dashboard" element={
+          <AuthMiddleware requiredRole="user">
+            <UserDashboard />
+          </AuthMiddleware>
+        } />
+        <Route path="/retailer/dashboard" element={
+          <AuthMiddleware requiredRole="retailer">
+            <RetailerDashboard user={user} onLogout={handleLogout} />
+          </AuthMiddleware>
+        } />
         <Route path="/admin/test" element={<AdminTestPage />} />
       </Routes>
     </Router>

@@ -69,6 +69,11 @@ const Login = () => {
       } else {
         console.log("Login response:", data);
         console.log("User role:", data.user?.role);
+        
+        // Store user data and token in localStorage
+        localStorage.setItem('user', JSON.stringify(data.user));
+        localStorage.setItem('token', data.token);
+        
         alert("Login successful!");
         // Redirect based on user role with a small delay
         setTimeout(() => {
@@ -109,12 +114,12 @@ const Login = () => {
   }
 
   return (
-    <div className="min-h-screen w-full relative overflow-hidden bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
+    <div className="min-h-screen w-full relative overflow-hidden bg-gradient-to-br from-emerald-900 via-teal-800 to-cyan-900">
       {/* Animated Background Elements */}
       <div className="absolute inset-0">
-        <div className="absolute top-20 left-20 w-72 h-72 bg-purple-400 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob"></div>
-        <div className="absolute top-40 right-20 w-72 h-72 bg-pink-400 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob animation-delay-2000"></div>
-        <div className="absolute -bottom-8 left-40 w-72 h-72 bg-blue-400 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob animation-delay-4000"></div>
+        <div className="absolute top-20 left-20 w-72 h-72 bg-emerald-400 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob"></div>
+        <div className="absolute top-40 right-20 w-72 h-72 bg-teal-400 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob animation-delay-2000"></div>
+        <div className="absolute -bottom-8 left-40 w-72 h-72 bg-cyan-400 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob animation-delay-4000"></div>
       </div>
 
       {/* Floating Particles */}
@@ -150,13 +155,13 @@ const Login = () => {
 
               {/* Logo */}
               <div className="text-center mb-8">
-                <div className="inline-flex items-center space-x-2 bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
+                <div className="inline-flex items-center space-x-2 bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent">
                   <span className="text-5xl font-black">Fresh</span>
                   <span className="text-5xl font-black text-white">Nest</span>
                 </div>
                 <div className="mt-4">
                   <h1 className="text-3xl font-bold text-white mb-2">Welcome Back</h1>
-                  <p className="text-purple-200 text-lg">Sign in to your account</p>
+                  <p className="text-emerald-200 text-lg">Sign in to your account</p>
                 </div>
               </div>
 
@@ -166,13 +171,13 @@ const Login = () => {
                 <div className="flex rounded-2xl overflow-hidden border border-white/20 bg-white/5 backdrop-blur-sm">
                   <button 
                     type="button" 
-                    className={`flex-1 py-4 text-lg font-semibold transition-all duration-300 ${window.location.pathname === "/login" ? "bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg" : "bg-transparent text-purple-200 hover:text-white"}`}
+                    className={`flex-1 py-4 text-lg font-semibold transition-all duration-300 ${window.location.pathname === "/login" ? "bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-lg" : "bg-transparent text-emerald-200 hover:text-white"}`}
                   >
                     Sign In
                   </button>
                   <button 
                     type="button" 
-                    className={`flex-1 py-4 text-lg font-semibold transition-all duration-300 ${window.location.pathname === "/signup" ? "bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg" : "bg-transparent text-purple-200 hover:text-white"}`} 
+                    className={`flex-1 py-4 text-lg font-semibold transition-all duration-300 ${window.location.pathname === "/signup" ? "bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-lg" : "bg-transparent text-emerald-200 hover:text-white"}`} 
                     onClick={() => navigate(role === 'retailer' ? '/retailer-signup' : '/signup')}
                   >
                     Sign Up
@@ -185,12 +190,12 @@ const Login = () => {
                       type="email"
                       name="email"
                       placeholder="Enter your email"
-                      className="w-full px-6 py-4 bg-white/10 border border-white/20 rounded-2xl text-white placeholder-purple-200 focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-transparent transition-all duration-300 backdrop-blur-sm"
+                      className="w-full px-6 py-4 bg-white/10 border border-white/20 rounded-2xl text-white placeholder-emerald-200 focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-transparent transition-all duration-300 backdrop-blur-sm"
                       value={form.email}
                       onChange={handleChange}
                     />
                     <div className="absolute right-4 top-1/2 transform -translate-y-1/2">
-                      <svg className="w-5 h-5 text-purple-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-5 h-5 text-emerald-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                       </svg>
                     </div>
@@ -209,12 +214,12 @@ const Login = () => {
                       type="password"
                       name="password"
                       placeholder="Enter your password"
-                      className="w-full px-6 py-4 bg-white/10 border border-white/20 rounded-2xl text-white placeholder-purple-200 focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-transparent transition-all duration-300 backdrop-blur-sm"
+                      className="w-full px-6 py-4 bg-white/10 border border-white/20 rounded-2xl text-white placeholder-emerald-200 focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-transparent transition-all duration-300 backdrop-blur-sm"
                       value={form.password}
                       onChange={handleChange}
                     />
                     <div className="absolute right-4 top-1/2 transform -translate-y-1/2">
-                      <svg className="w-5 h-5 text-purple-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-5 h-5 text-emerald-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                       </svg>
                     </div>
@@ -242,7 +247,7 @@ const Login = () => {
                   <button
                     type="button"
                     onClick={() => navigate('/forgot-password')}
-                    className="text-sm text-purple-300 hover:text-purple-100 transition-colors font-medium"
+                    className="text-sm text-emerald-300 hover:text-emerald-100 transition-colors font-medium"
                   >
                     Forgot Password?
                   </button>
@@ -251,7 +256,7 @@ const Login = () => {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-bold py-4 px-6 rounded-2xl transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-purple-500/50 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                  className="w-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white font-bold py-4 px-6 rounded-2xl transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-emerald-500/50 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
                 >
                   {loading ? (
                     <div className="flex items-center justify-center">
@@ -268,17 +273,38 @@ const Login = () => {
 
                 <div className="relative">
                   <div className="absolute inset-0 flex items-center">
-                    <div className="w-full border-t border-purple-300/30"></div>
+                    <div className="w-full border-t border-emerald-300/30"></div>
                   </div>
                   <div className="relative flex justify-center text-sm">
-                    <span className="px-2 bg-transparent text-purple-200">Or continue with</span>
+                    <span className="px-2 bg-transparent text-emerald-200">Or continue with</span>
                   </div>
                 </div>
 
                 <div className="flex justify-center">
                   <button 
-                    type="button" 
-                    className="flex items-center gap-3 border border-white/20 rounded-2xl px-6 py-3 bg-white/10 hover:bg-white/20 transition-all duration-300 backdrop-blur-sm"
+                    type="button"
+                    onClick={async () => {
+                      try {
+                        setLoading(true);
+                        const response = await fetch(`${API_BASE_URL}/auth/google`, {
+                          method: 'GET',
+                          credentials: 'include'
+                        });
+                        
+                        if (response.ok) {
+                          const data = await response.json();
+                          window.location.href = data.authUrl;
+                        } else {
+                          setServerError("Failed to initiate Google Sign In");
+                        }
+                      } catch (error) {
+                        setServerError("Error connecting to authentication server");
+                      } finally {
+                        setLoading(false);
+                      }
+                    }} 
+                    disabled={loading}
+                    className="flex items-center gap-3 border border-white/20 rounded-2xl px-6 py-3 bg-white/10 hover:bg-white/20 transition-all duration-300 backdrop-blur-sm disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <svg className="w-5 h-5" viewBox="0 0 24 24">
                       <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -286,17 +312,19 @@ const Login = () => {
                       <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
                       <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
                     </svg>
-                    <span className="text-white font-medium">Continue with Google</span>
+                    <span className="text-white font-medium">
+                      {loading ? 'Please wait...' : 'Continue with Google'}
+                    </span>
                   </button>
                 </div>
 
                 <div className="text-center">
-                  <p className="text-purple-200">
+                  <p className="text-emerald-200">
                     Don't have an account?{" "}
                     <button
                       type="button"
                       onClick={() => navigate(role === 'retailer' ? '/retailer-signup' : '/signup')}
-                      className="text-purple-400 hover:text-purple-300 font-semibold underline"
+                      className="text-emerald-400 hover:text-emerald-300 font-semibold underline"
                     >
                       Sign up
                     </button>
@@ -323,16 +351,16 @@ const Login = () => {
                 <h2 className="text-3xl font-bold text-white mb-4">
                   Welcome Back to FreshNest
                 </h2>
-                <p className="text-purple-200 text-lg mb-6">
-                  Access your dashboard, manage your inventory, and keep your business running smoothly.
-                </p>
-                <div className="flex items-center space-x-4">
-                  <div className="flex -space-x-2">
-                    {[...Array(4)].map((_, i) => (
-                      <div key={i} className="w-8 h-8 bg-purple-400 rounded-full border-2 border-white"></div>
-                    ))}
-                  </div>
-                  <span className="text-purple-200 text-sm">Trusted by 10,000+ users</span>
+                                 <p className="text-emerald-200 text-lg mb-6">
+                   Access your dashboard, manage your inventory, and keep your business running smoothly.
+                 </p>
+                 <div className="flex items-center space-x-4">
+                   <div className="flex -space-x-2">
+                     {[...Array(4)].map((_, i) => (
+                       <div key={i} className="w-8 h-8 bg-emerald-400 rounded-full border-2 border-white"></div>
+                     ))}
+                   </div>
+                   <span className="text-emerald-200 text-sm">Trusted by 10,000+ users</span>
                 </div>
               </div>
             </div>
