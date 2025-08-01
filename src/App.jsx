@@ -17,6 +17,7 @@ import AdminTestPage from './components/AdminTestPage';
 import ForgotPassword from './components/ForgotPassword';
 import ResetPassword from './components/ResetPassword';
 import RetailerDashboard from './components/RetailerDashboard';
+import OTPVerification from './components/OTPVerification';
 
 function Home() {
   return (
@@ -43,6 +44,7 @@ export default function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
         <Route path="/retailer-signup" element={<RetailerSignup />} />
+        <Route path="/otp-verification" element={<OTPVerification />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/admin/dashboard" element={
