@@ -22,6 +22,13 @@ import ForgotPassword from './components/ForgotPassword';
 import ResetPassword from './components/ResetPassword';
 import RetailerDashboard from './components/RetailerDashboard';
 import OTPVerification from './components/OTPVerification';
+import ClerkAuthHandler from './components/ClerkAuthHandler';
+import ClerkTest from './components/ClerkTest';
+import GoogleAuthDiagnostic from './components/GoogleAuthDiagnostic';
+import ClerkDiagnostic from './components/ClerkDiagnostic';
+import ClerkTestPage from './components/ClerkTestPage';
+import SignOutHelper from './components/SignOutHelper';
+import ClerkAuthWrapper from './components/ClerkAuthWrapper';
 
 function Home() {
   return (
@@ -41,7 +48,8 @@ export default function App() {
     <AuthProvider>
       <ToastProvider>
         <Router>
-        <Routes>
+          <ClerkAuthWrapper>
+            <Routes>
           {/* Public Routes */}
           <Route path="/" element={<Home />} />
           <Route path="/login" element={<Login />} />
@@ -50,6 +58,12 @@ export default function App() {
           <Route path="/otp-verification" element={<OTPVerification />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
+          <Route path="/auth-handler" element={<ClerkAuthHandler />} />
+          <Route path="/clerk-test" element={<ClerkTest />} />
+          <Route path="/google-diagnostic" element={<GoogleAuthDiagnostic />} />
+          <Route path="/clerk-diagnostic" element={<ClerkDiagnostic />} />
+          <Route path="/clerk-test-page" element={<ClerkTestPage />} />
+          <Route path="/sign-out" element={<SignOutHelper />} />
           
           {/* JWT Protected Routes */}
           <Route path="/dashboard" element={
@@ -79,7 +93,8 @@ export default function App() {
           
           {/* Legacy route for testing */}
           <Route path="/admin/test" element={<AdminTestPage />} />
-        </Routes>
+            </Routes>
+          </ClerkAuthWrapper>
         </Router>
       </ToastProvider>
     </AuthProvider>

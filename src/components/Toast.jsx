@@ -7,6 +7,42 @@ import {
   FiX 
 } from 'react-icons/fi';
 
+// CSS-in-JS styles for animations
+const toastStyles = `
+  @keyframes shrink {
+    from { width: 100%; }
+    to { width: 0%; }
+  }
+  @keyframes slideInRight {
+    from {
+      transform: translateX(100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateX(0);
+      opacity: 1;
+    }
+  }
+  @keyframes slideOutRight {
+    from {
+      transform: translateX(0);
+      opacity: 1;
+    }
+    to {
+      transform: translateX(100%);
+      opacity: 0;
+    }
+  }
+`;
+
+// Inject styles into document head
+if (typeof document !== 'undefined' && !document.getElementById('toast-styles')) {
+  const styleElement = document.createElement('style');
+  styleElement.id = 'toast-styles';
+  styleElement.textContent = toastStyles;
+  document.head.appendChild(styleElement);
+}
+
 const Toast = ({ 
   message, 
   type = 'success', 
@@ -151,33 +187,6 @@ const Toast = ({
           />
         </div>
       </div>
-      
-      <style jsx>{`
-        @keyframes shrink {
-          from { width: 100%; }
-          to { width: 0%; }
-        }
-        @keyframes slideInRight {
-          from {
-            transform: translateX(100%);
-            opacity: 0;
-          }
-          to {
-            transform: translateX(0);
-            opacity: 1;
-          }
-        }
-        @keyframes slideOutRight {
-          from {
-            transform: translateX(0);
-            opacity: 1;
-          }
-          to {
-            transform: translateX(100%);
-            opacity: 0;
-          }
-        }
-      `}</style>
     </div>
   );
 };

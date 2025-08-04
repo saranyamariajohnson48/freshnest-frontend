@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useClerk } from '@clerk/clerk-react';
 import authService from '../services/authService';
 import { useToastContext } from '../contexts/ToastContext';
 import { 
@@ -89,6 +90,7 @@ const AdminDashboard = () => {
 
   const navigate = useNavigate();
   const { success, error } = useToastContext();
+  const { signOut } = useClerk();
 
   // Logout handler
   const handleLogout = async () => {
@@ -96,8 +98,19 @@ const AdminDashboard = () => {
       // Show logout toast
       success("Logging out... See you soon! 👋", { duration: 2000 });
       
-      // Use the proper authService logout method
+      console.log('🔄 Starting logout process...');
+      
+      // First, clear JWT tokens and backend session
       await authService.logout();
+      console.log('✅ Cleared backend session');
+      
+      // Then sign out from Clerk (Google OAuth)
+      await signOut();
+      console.log('✅ Signed out from Clerk');
+      
+      // Clear any remaining auth data
+      authService.clearAuthData();
+      console.log('✅ Cleared all auth data');
       
       // Delay redirect to show toast
       setTimeout(() => {
@@ -106,7 +119,14 @@ const AdminDashboard = () => {
     } catch (err) {
       console.error('Logout error:', err);
       error("Logout failed, but clearing session anyway", { duration: 3000 });
-      // Even if logout fails, clear data and redirect
+      
+      // Even if logout fails, clear everything and redirect
+      try {
+        await signOut();
+      } catch (clerkError) {
+        console.error('Clerk signout error:', clerkError);
+      }
+      
       authService.clearAuthData();
       setTimeout(() => {
         window.location.href = '/login';

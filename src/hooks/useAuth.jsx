@@ -27,16 +27,33 @@ export const AuthProvider = ({ children }) => {
             console.log('Could not refresh profile:', error.message);
             // Keep existing user data if profile refresh fails
           }
+        } else {
+          setUser(null);
+          setIsAuthenticated(false);
         }
       } catch (error) {
         console.error('Auth initialization error:', error);
         authService.clearAuthData();
+        setUser(null);
+        setIsAuthenticated(false);
       } finally {
         setLoading(false);
       }
     };
 
     initializeAuth();
+
+    // Listen for storage changes (when ClerkAuthWrapper updates auth data)
+    const handleStorageChange = () => {
+      console.log('Storage changed, re-checking auth state');
+      initializeAuth();
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+    };
   }, []);
 
   // Login function

@@ -259,6 +259,7 @@ class AuthService {
 
   // Clear all auth data
   clearAuthData() {
+    // Clear current auth keys
     localStorage.removeItem(this.tokenKey);
     localStorage.removeItem(this.refreshTokenKey);
     localStorage.removeItem(this.userKey);
@@ -274,6 +275,13 @@ class AuthService {
     sessionStorage.removeItem(this.refreshTokenKey);
     sessionStorage.removeItem(this.userKey);
     sessionStorage.removeItem(this.tokenExpiryKey);
+    
+    // Clear legacy session storage keys
+    sessionStorage.removeItem('token');
+    sessionStorage.removeItem('user');
+    sessionStorage.removeItem('refreshToken');
+    
+    console.log('🧹 Cleared all authentication data from localStorage and sessionStorage');
   }
 
   // Get user profile
