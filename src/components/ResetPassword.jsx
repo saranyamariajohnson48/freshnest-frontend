@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { API_BASE_URL } from "../api";
+import { useToastContext } from "../contexts/ToastContext";
 import { 
   FiLock, 
   FiArrowLeft, 
@@ -32,6 +33,7 @@ function validatePassword(password) {
 const ResetPassword = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const { success, error } = useToastContext();
   const token = searchParams.get('token');
   
   const [form, setForm] = useState({
@@ -89,9 +91,12 @@ const ResetPassword = () => {
           setTokenValid(false);
         }
         setServerError(data.error || "Failed to reset password");
+        error(data.error || "Failed to reset password", { duration: 4000 });
       } else {
-        alert("Password reset successful! You can now login with your new password.");
-        navigate('/login');
+        success("Password reset successful! 🎉 You can now login with your new password.", { duration: 4000 });
+        setTimeout(() => {
+          navigate('/login');
+        }, 2000);
       }
     } catch (err) {
       setLoading(false);

@@ -1,15 +1,17 @@
 import { Navigate } from 'react-router-dom';
 
 export default function AuthMiddleware({ children, requiredRole }) {
-  // Get user and token from localStorage
-  const user = JSON.parse(localStorage.getItem('user'));
-  const token = localStorage.getItem('token');
+  // Get user and token from localStorage using the correct keys
+  const user = JSON.parse(localStorage.getItem('freshnest_user'));
+  const token = localStorage.getItem('freshnest_access_token');
 
   // Check if both user and token exist
   if (!user || !token) {
     // Clear any potentially invalid data
-    localStorage.removeItem('user');
-    localStorage.removeItem('token');
+    localStorage.removeItem('freshnest_user');
+    localStorage.removeItem('freshnest_access_token');
+    localStorage.removeItem('freshnest_refresh_token');
+    localStorage.removeItem('freshnest_token_expiry');
     // Not logged in, redirect to login page
     return <Navigate to="/login" replace />;
   }
@@ -25,8 +27,10 @@ export default function AuthMiddleware({ children, requiredRole }) {
         return <Navigate to="/user/dashboard" replace />;
       default:
         // Clear invalid session data
-        localStorage.removeItem('user');
-        localStorage.removeItem('token');
+        localStorage.removeItem('freshnest_user');
+        localStorage.removeItem('freshnest_access_token');
+        localStorage.removeItem('freshnest_refresh_token');
+        localStorage.removeItem('freshnest_token_expiry');
         return <Navigate to="/login" replace />;
     }
   }

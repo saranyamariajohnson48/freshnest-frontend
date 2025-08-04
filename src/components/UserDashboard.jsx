@@ -1,4 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import authService from '../services/authService';
+import { useToastContext } from '../contexts/ToastContext';
 import { 
   FiHome, 
   FiPackage, 
@@ -53,9 +56,35 @@ ChartJS.register(
 );
 
 const UserDashboard = () => {
+  const navigate = useNavigate();
+  const { success, error } = useToastContext();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [activeSection, setActiveSection] = useState('overview');
   const [userEmail] = useState('saranyamariajohnson2026@mca.ajce.in');
+
+  // Logout handler
+  const handleLogout = async () => {
+    try {
+      // Show logout toast
+      success("Logging out... See you soon! 👋", { duration: 2000 });
+      
+      // Use the proper authService logout method
+      await authService.logout();
+      
+      // Delay redirect to show toast
+      setTimeout(() => {
+        window.location.href = '/login';
+      }, 1500);
+    } catch (err) {
+      console.error('Logout error:', err);
+      error("Logout failed, but clearing session anyway", { duration: 3000 });
+      // Even if logout fails, clear data and redirect
+      authService.clearAuthData();
+      setTimeout(() => {
+        window.location.href = '/login';
+      }, 1500);
+    }
+  };
   
   // Sample inventory data
   const [inventoryData] = useState([
@@ -370,7 +399,10 @@ const UserDashboard = () => {
 
         {/* Logout */}
         <div className="px-6 py-6 border-t border-emerald-500/30 relative z-10">
-          <button className="w-full flex items-center px-4 py-4 text-sm font-semibold text-emerald-100 hover:text-white hover:bg-emerald-600/50 rounded-2xl transition-all duration-200 hover:scale-105">
+          <button 
+            onClick={handleLogout}
+            className="w-full flex items-center px-4 py-4 text-sm font-semibold text-emerald-100 hover:text-white hover:bg-emerald-600/50 rounded-2xl transition-all duration-200 hover:scale-105"
+          >
             <FiLogOut className="w-5 h-5 mr-4" />
             {sidebarOpen && <span className="font-medium">Sign Out</span>}
           </button>

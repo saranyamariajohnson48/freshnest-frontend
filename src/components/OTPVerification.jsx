@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { API_BASE_URL } from '../api';
+import { useToastContext } from '../contexts/ToastContext';
 
 const OTPVerification = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { success, error: showError } = useToastContext();
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -75,10 +77,13 @@ const OTPVerification = () => {
       const data = await response.json();
 
       if (response.ok) {
-        alert('Email verified successfully!');
-        navigate('/login');
+        success('Email verified successfully! 🎉 You can now login.', { duration: 4000 });
+        setTimeout(() => {
+          navigate('/login');
+        }, 2000);
       } else {
         setError(data.error || 'Invalid OTP. Please try again.');
+        showError(data.error || 'Invalid OTP. Please try again.', { duration: 4000 });
       }
     } catch (err) {
       setError('Network error. Please try again.');
@@ -106,12 +111,13 @@ const OTPVerification = () => {
       const data = await response.json();
 
       if (response.ok) {
-        alert('OTP sent successfully!');
+        success('OTP sent successfully! 📧 Check your email.', { duration: 3000 });
         setTimer(60);
         setCanResend(false);
         setOtp(['', '', '', '', '', '']);
       } else {
         setError(data.error || 'Failed to resend OTP');
+        showError(data.error || 'Failed to resend OTP', { duration: 4000 });
       }
     } catch (err) {
       setError('Network error. Please try again.');

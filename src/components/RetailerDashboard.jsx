@@ -1,4 +1,8 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../hooks/useAuth';
+import authService from '../services/authService';
+import { useToastContext } from '../contexts/ToastContext';
 import {
   FaPlus,
   FaFileInvoice,
@@ -11,7 +15,35 @@ import {
 
 const today = new Date().toLocaleDateString();
 
-const RetailerDashboard = ({ user, onLogout }) => {
+const RetailerDashboard = () => {
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const { success, error } = useToastContext();
+  
+  // Logout handler
+  const handleLogout = async () => {
+    try {
+      // Show logout toast
+      success("Logging out... See you soon! 👋", { duration: 2000 });
+      
+      // Use the proper authService logout method
+      await authService.logout();
+      
+      // Delay redirect to show toast
+      setTimeout(() => {
+        window.location.href = '/login';
+      }, 1500);
+    } catch (err) {
+      console.error('Logout error:', err);
+      error("Logout failed, but clearing session anyway", { duration: 3000 });
+      // Even if logout fails, clear data and redirect
+      authService.clearAuthData();
+      setTimeout(() => {
+        window.location.href = '/login';
+      }, 1500);
+    }
+  };
+
   const [notifications] = useState([
     { id: 1, message: 'Product XYZ is running low on stock.' },
     { id: 2, message: 'Invoice INV#2314 was downloaded successfully.' },
@@ -152,7 +184,7 @@ const RetailerDashboard = ({ user, onLogout }) => {
           <div className="text-lg font-semibold">{user?.fullName || 'Retailer'}</div>
           <div className="text-gray-500">{user?.email || 'retailer@email.com'}</div>
           <button
-            onClick={onLogout}
+            onClick={handleLogout}
             className="mt-4 flex items-center gap-2 bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600"
           >
             <FaSignOutAlt /> Logout

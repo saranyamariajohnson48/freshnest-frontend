@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { API_BASE_URL } from "../api";
 import img1 from "../assets/img1.jpg";
+import { useToastContext } from "../contexts/ToastContext";
 
 // Validation functions
 function validateFullName(fullName) {
@@ -64,6 +65,7 @@ function validatePhone(phone) {
 }
 
 export default function RetailerSignup() {
+  const { success, error } = useToastContext();
   const [form, setForm] = useState({
     fullName: "",
     email: "",
@@ -131,14 +133,17 @@ export default function RetailerSignup() {
       setLoading(false);
       if (!res.ok) {
         setServerError(data.error || "Signup failed");
+        error(data.error || "Signup failed", { duration: 4000 });
       } else {
-        alert("Registration successful! Please check your email for the verification code.");
-        navigate("/otp-verification", { 
-          state: { 
-            email: form.email, 
-            userType: 'retailer' 
-          } 
-        });
+        success("Registration successful! 🎉 Please check your email for the verification code.", { duration: 4000 });
+        setTimeout(() => {
+          navigate("/otp-verification", { 
+            state: { 
+              email: form.email, 
+              userType: 'retailer' 
+            } 
+          });
+        }, 2000);
       }
     } catch (err) {
       setLoading(false);

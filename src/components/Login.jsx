@@ -2,6 +2,8 @@ import React, { useState } from "react";
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { API_BASE_URL } from "../api";
 import img1 from "../assets/img1.jpg";
+import authService from "../services/authService";
+import { useToastContext } from "../contexts/ToastContext";
 
 function validateEmail(email) {
   if (!email || email.trim() === "") return "Email is required";
@@ -16,20 +18,15 @@ function validatePassword(password) {
   if (password.includes(" ")) return "Password cannot contain spaces";
   if (password.length < 6) return "Password must be at least 6 characters";
   
-  const hasUppercase = /[A-Z]/.test(password);
-  const hasLowercase = /[a-z]/.test(password);
-  const hasDigit = /\d/.test(password);
-  const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(password);
-  
-  if (!(hasUppercase && hasLowercase && hasDigit && hasSpecialChar)) {
-    return "Password should include at least one uppercase letter, one lowercase letter, one digit, and one special character";
-  }
+  // For login, we're more lenient - just check basic requirements
+  // The server will validate the actual password match
   return "";
 }
 
 const Login = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const { success, error } = useToastContext();
   const role = searchParams.get('role');
   const [form, setForm] = useState({ email: "", password: "" });
   const [errors, setErrors] = useState({});
@@ -50,66 +47,94 @@ const Login = () => {
     };
     setErrors(newErrors);
     if (newErrors.email || newErrors.password) return;
+    
     setLoading(true);
     setServerError("");
+    
     try {
-      const res = await fetch(`${API_BASE_URL}/api/auth/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+      console.log("Attempting login with:", {
+        email: form.email,
+        passwordLength: form.password?.length
       });
-      const data = await res.json();
+      
+      const data = await authService.login(form);
       setLoading(false);
-      if (!res.ok) {
-        if (data.emailNotVerified) {
-          setServerError("Please verify your email address before logging in. Check your inbox for the verification link.");
-        } else {
-          setServerError(data.error || "Login failed");
-        }
-      } else {
-        console.log("Login response:", data);
-        console.log("User role:", data.user?.role);
-        
-        // Store user data and token in localStorage
-        localStorage.setItem('user', JSON.stringify(data.user));
-        localStorage.setItem('token', data.token);
-        
-        alert("Login successful!");
-        // Redirect based on user role with a small delay
-        setTimeout(() => {
-          if (data.user && (data.user.role === 'admin' || data.user.role === 'Admin')) {
-            console.log("Redirecting to admin dashboard...");
-            navigate("/admin/dashboard");
-            setTimeout(() => {
-              if (window.location.pathname !== "/admin/dashboard") {
-                window.location.href = "/admin/dashboard";
-              }
-            }, 500);
-          } else if (data.user && (data.user.role === 'retailer' || data.user.role === 'Retailer')) {
-            console.log("Redirecting to retailer dashboard...");
-            navigate("/retailer/dashboard");
-            setTimeout(() => {
-              if (window.location.pathname !== "/retailer/dashboard") {
-                window.location.href = "/retailer/dashboard";
-              }
-            }, 500);
-          } else if (data.user && (data.user.role === 'user' || data.user.role === 'User')) {
-            console.log("Redirecting to user dashboard...");
-            navigate("/user/dashboard");
-            setTimeout(() => {
-              if (window.location.pathname !== "/user/dashboard") {
-                window.location.href = "/user/dashboard";
-              }
-            }, 500);
-          } else {
-            console.log("Redirecting to home...");
-            navigate("/");
-          }
-        }, 100);
+      
+      if (!data || !data.user) {
+        throw new Error("Invalid response from server");
       }
-    } catch (err) {
+      
+      console.log("Login successful:", data);
+      console.log("User role:", data.user?.role);
+      
+      // Show success toast
+      success(`Welcome back, ${data.user?.fullName || data.user?.email}! 🎉`, {
+        duration: 3000
+      });
+      
+      // Redirect based on user role
+      setTimeout(() => {
+        if (data.user && (data.user.role === 'admin' || data.user.role === 'Admin')) {
+          console.log("Redirecting to admin dashboard...");
+          navigate("/admin/dashboard");
+          setTimeout(() => {
+            if (window.location.pathname !== "/admin/dashboard") {
+              window.location.href = "/admin/dashboard";
+            }
+          }, 500);
+        } else if (data.user && (data.user.role === 'retailer' || data.user.role === 'Retailer')) {
+          console.log("Redirecting to retailer dashboard...");
+          navigate("/retailer/dashboard");
+          setTimeout(() => {
+            if (window.location.pathname !== "/retailer/dashboard") {
+              window.location.href = "/retailer/dashboard";
+            }
+          }, 500);
+        } else if (data.user && (data.user.role === 'user' || data.user.role === 'User')) {
+          console.log("Redirecting to user dashboard...");
+          navigate("/user/dashboard");
+          setTimeout(() => {
+            if (window.location.pathname !== "/user/dashboard") {
+              window.location.href = "/user/dashboard";
+            }
+          }, 500);
+        } else {
+          console.log("Redirecting to home...");
+          navigate("/");
+        }
+      }, 100);
+      
+    } catch (error) {
       setLoading(false);
-      setServerError("Server error. Please try again.");
+      console.error('Login error details:', error);
+      
+      // Handle specific error cases
+      const errorMessage = error.message.toLowerCase();
+      let displayMessage = "";
+      
+      if (errorMessage.includes('verify your email')) {
+        displayMessage = "Please verify your email address before logging in. Check your inbox for the verification link.";
+      } else if (errorMessage.includes('server error')) {
+        displayMessage = "Server is currently unavailable. Please try again later or contact support.";
+      } else if (errorMessage.includes('invalid')) {
+        displayMessage = "Invalid email or password. Please check your credentials and try again.";
+      } else if (errorMessage.includes('not found')) {
+        displayMessage = "Account not found. Please check your email or sign up for a new account.";
+      } else {
+        displayMessage = error.message || "Login failed. Please try again.";
+      }
+      
+      // Show error toast
+      error(displayMessage, { duration: 5000 });
+      setServerError(displayMessage);
+      
+      // Log additional debugging information
+      console.log('Login attempt details:', {
+        email: form.email,
+        timestamp: new Date().toISOString(),
+        errorType: error.name,
+        errorStack: error.stack
+      });
     }
   }
 

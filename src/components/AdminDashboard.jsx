@@ -1,4 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import authService from '../services/authService';
+import { useToastContext } from '../contexts/ToastContext';
 import { 
   FiHome, 
   FiPackage, 
@@ -84,13 +87,31 @@ const AdminDashboard = () => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  const navigate = useNavigate();
+  const { success, error } = useToastContext();
+
   // Logout handler
-  const handleLogout = () => {
-    // Clear any stored authentication data
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    // Redirect to login page
-    window.location.href = '/login';
+  const handleLogout = async () => {
+    try {
+      // Show logout toast
+      success("Logging out... See you soon! 👋", { duration: 2000 });
+      
+      // Use the proper authService logout method
+      await authService.logout();
+      
+      // Delay redirect to show toast
+      setTimeout(() => {
+        window.location.href = '/login';
+      }, 1500);
+    } catch (err) {
+      console.error('Logout error:', err);
+      error("Logout failed, but clearing session anyway", { duration: 3000 });
+      // Even if logout fails, clear data and redirect
+      authService.clearAuthData();
+      setTimeout(() => {
+        window.location.href = '/login';
+      }, 1500);
+    }
   };
   
   const [stats, setStats] = useState({

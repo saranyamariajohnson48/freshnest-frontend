@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { API_BASE_URL } from "../api";
 import img1 from "../assets/img1.jpg";
+import { useToastContext } from "../contexts/ToastContext";
 
 // Validation functions
 function validateFullName(fullName) {
@@ -63,6 +64,7 @@ function validateConfirmPassword(password, confirmPassword) {
 }
 
 export default function Signup() {
+  const { success, error } = useToastContext();
   const [form, setForm] = useState({
     fullName: "",
     email: "",
@@ -128,14 +130,17 @@ export default function Signup() {
       setLoading(false);
       if (!res.ok) {
         setServerError(data.error || "Signup failed");
+        error(data.error || "Signup failed", { duration: 4000 });
       } else {
-        alert("Signup successful! Please check your email for the verification code.");
-        navigate("/otp-verification", { 
-          state: { 
-            email: form.email, 
-            userType: 'user' 
-          } 
-        });
+        success("Signup successful! 🎉 Please check your email for the verification code.", { duration: 4000 });
+        setTimeout(() => {
+          navigate("/otp-verification", { 
+            state: { 
+              email: form.email, 
+              userType: 'user' 
+            } 
+          });
+        }, 2000);
       }
     } catch (err) {
       setLoading(false);
