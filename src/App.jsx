@@ -31,6 +31,9 @@ import SignOutHelper from './components/SignOutHelper';
 import ClerkAuthWrapper from './components/ClerkAuthWrapper';
 import GoogleRoleSelectionPage from './components/GoogleRoleSelectionPage';
 import ValidationTest from './components/ValidationTest';
+import TestStaffAPI from './components/TestStaffAPI';
+import TokenDebug from './components/TokenDebug';
+import StaffDashboard from './components/StaffDashboard';
 
 function Home() {
   return (
@@ -68,6 +71,8 @@ export default function App() {
           <Route path="/sign-out" element={<SignOutHelper />} />
           <Route path="/google-role-selection" element={<GoogleRoleSelectionPage />} />
           <Route path="/validation-test" element={<ValidationTest />} />
+          <Route path="/test-staff-api" element={<TestStaffAPI />} />
+          <Route path="/token-debug" element={<TokenDebug />} />
           
           {/* JWT Protected Routes */}
           <Route path="/dashboard" element={
@@ -94,7 +99,13 @@ export default function App() {
               <RetailerDashboard />
             </ProtectedRoute>
           } />
-          
+
+          <Route path="/staff/dashboard" element={
+            <ProtectedRoute requiredRoles={['staff', 'Staff']}>
+              <StaffDashboard />
+            </ProtectedRoute>
+          } />
+
           {/* Legacy route for testing */}
           <Route path="/admin/test" element={<AdminTestPage />} />
             </Routes>

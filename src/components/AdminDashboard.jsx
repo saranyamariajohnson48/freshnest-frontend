@@ -3,6 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { useClerk } from '@clerk/clerk-react';
 import authService from '../services/authService';
 import { useToastContext } from '../contexts/ToastContext';
+import AddStaffForm from './AddStaffForm';
+import StaffList from './StaffList';
+import tokenManager from '../utils/tokenManager';
 import { 
   FiHome, 
   FiPackage, 
@@ -67,8 +70,10 @@ const AdminDashboard = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false); // Start closed on mobile
   const [activeSection, setActiveSection] = useState('dashboard');
   const [timeRange, setTimeRange] = useState('7d');
+  const [showAddStaffForm, setShowAddStaffForm] = useState(false);
+  const [staffRefreshTrigger, setStaffRefreshTrigger] = useState(0);
 
-  // Handle responsive sidebar behavior
+  // Handle responsive sidebar behavior and token management
   useEffect(() => {
     const handleResize = () => {
       if (window.innerWidth >= 1024) {
@@ -84,8 +89,14 @@ const AdminDashboard = () => {
     // Add event listener
     window.addEventListener('resize', handleResize);
     
+    // Start token auto-refresh to maintain session
+    tokenManager.startAutoRefresh();
+    
     // Cleanup
-    return () => window.removeEventListener('resize', handleResize);
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      tokenManager.stopAutoRefresh();
+    };
   }, []);
 
   const navigate = useNavigate();
@@ -132,6 +143,20 @@ const AdminDashboard = () => {
         window.location.href = '/login';
       }, 1500);
     }
+  };
+
+  // Staff management handlers
+  const handleAddStaff = () => {
+    setShowAddStaffForm(true);
+  };
+
+  const handleStaffFormClose = () => {
+    setShowAddStaffForm(false);
+  };
+
+  const handleStaffCreated = (newStaff) => {
+    setStaffRefreshTrigger(prev => prev + 1);
+    setShowAddStaffForm(false);
   };
   
   const [stats, setStats] = useState({
@@ -1575,66 +1600,21 @@ const AdminDashboard = () => {
                   <p className="text-gray-600 mt-1 text-sm lg:text-base">Manage team members, roles, and permissions.</p>
                 </div>
                 <div className="flex items-center space-x-3">
-                  <button className="bg-emerald-600 text-white px-3 lg:px-4 py-2 rounded-lg hover:bg-emerald-700 transition-colors text-sm lg:text-base">
+                  <button 
+                    onClick={handleAddStaff}
+                    className="bg-emerald-600 text-white px-3 lg:px-4 py-2 rounded-lg hover:bg-emerald-700 transition-colors text-sm lg:text-base flex items-center space-x-2"
+                  >
+                    <FiUsers className="w-4 h-4" />
                     <span className="hidden sm:inline">Add Staff</span>
                     <span className="sm:hidden">Add</span>
                   </button>
                 </div>
               </div>
               
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
-                <div className="bg-white rounded-xl border border-gray-200 p-4 lg:p-6">
-                  <div className="flex items-center space-x-3 mb-4">
-                    <div className="p-2 rounded-lg bg-blue-50">
-                      <FiUsers className="w-5 h-5 text-blue-600" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-gray-600">Total Staff</p>
-                    </div>
-                  </div>
-                  <p className="text-xl lg:text-2xl font-bold text-gray-900">12</p>
-                  <p className="text-sm text-blue-600 font-medium">Active members</p>
-                </div>
-                
-                <div className="bg-white rounded-xl border border-gray-200 p-4 lg:p-6">
-                  <div className="flex items-center space-x-3 mb-4">
-                    <div className="p-2 rounded-lg bg-green-50">
-                      <FiUserCheck className="w-5 h-5 text-green-600" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-gray-600">Online Now</p>
-                    </div>
-                  </div>
-                  <p className="text-xl lg:text-2xl font-bold text-gray-900">8</p>
-                  <p className="text-sm text-green-600 font-medium">Currently working</p>
-                </div>
-                
-                <div className="bg-white rounded-xl border border-gray-200 p-4 lg:p-6">
-                  <div className="flex items-center space-x-3 mb-4">
-                    <div className="p-2 rounded-lg bg-yellow-50">
-                      <FiClock className="w-5 h-5 text-yellow-600" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-gray-600">Hours This Week</p>
-                    </div>
-                  </div>
-                  <p className="text-xl lg:text-2xl font-bold text-gray-900">324</p>
-                  <p className="text-sm text-yellow-600 font-medium">Total logged</p>
-                </div>
-                
-                <div className="bg-white rounded-xl border border-gray-200 p-4 lg:p-6">
-                  <div className="flex items-center space-x-3 mb-4">
-                    <div className="p-2 rounded-lg bg-purple-50">
-                      <FiAward className="w-5 h-5 text-purple-600" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-gray-600">Performance</p>
-                    </div>
-                  </div>
-                  <p className="text-xl lg:text-2xl font-bold text-gray-900">94%</p>
-                  <p className="text-sm text-purple-600 font-medium">Average rating</p>
-                </div>
-              </div>
+              <StaffList 
+                onAddStaff={handleAddStaff}
+                refreshTrigger={staffRefreshTrigger}
+              />
             </div>
           )}
 
@@ -1770,6 +1750,12 @@ const AdminDashboard = () => {
         </main>
       </div>
 
+      {/* Add Staff Form Modal */}
+      <AddStaffForm
+        isOpen={showAddStaffForm}
+        onClose={handleStaffFormClose}
+        onSuccess={handleStaffCreated}
+      />
     </div>
   );
 };

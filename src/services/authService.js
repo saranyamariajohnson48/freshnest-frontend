@@ -23,7 +23,8 @@ class AuthService {
 
   // Get access token
   getAccessToken() {
-    return localStorage.getItem(this.tokenKey);
+    // Try new token key first, then fallback to old 'token' key for backward compatibility
+    return localStorage.getItem(this.tokenKey) || localStorage.getItem('token');
   }
 
   // Get refresh token
@@ -154,8 +155,9 @@ class AuthService {
 
         return retryResponse;
       } catch (refreshError) {
-        this.logout();
-        throw new Error('Authentication required');
+        // Don't automatically logout, let the component handle it
+        console.error('Token refresh failed:', refreshError);
+        throw new Error('Token expired - please login again');
       }
     }
 

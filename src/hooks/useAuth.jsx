@@ -14,18 +14,22 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const initializeAuth = async () => {
       try {
-        if (authService.isAuthenticated()) {
-          const userData = authService.getUser();
+        // Check if we have a token
+        const token = authService.getAccessToken();
+        const userData = authService.getUser();
+        
+        if (token && userData) {
           setUser(userData);
           setIsAuthenticated(true);
           
-          // Try to refresh profile data
+          // Try to refresh profile data, but don't fail if it doesn't work
           try {
             const freshProfile = await authService.getProfile();
             setUser(freshProfile);
           } catch (error) {
             console.log('Could not refresh profile:', error.message);
             // Keep existing user data if profile refresh fails
+            // Don't set isAuthenticated to false here
           }
         } else {
           setUser(null);
@@ -33,9 +37,12 @@ export const AuthProvider = ({ children }) => {
         }
       } catch (error) {
         console.error('Auth initialization error:', error);
-        authService.clearAuthData();
-        setUser(null);
-        setIsAuthenticated(false);
+        // Only clear auth data if there's a serious error
+        if (!authService.getAccessToken()) {
+          authService.clearAuthData();
+          setUser(null);
+          setIsAuthenticated(false);
+        }
       } finally {
         setLoading(false);
       }
@@ -102,6 +109,27 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // Refresh auth state manually
+  const refreshAuth = async () => {
+    try {
+      const token = authService.getAccessToken();
+      const userData = authService.getUser();
+      
+      if (token && userData) {
+        setUser(userData);
+        setIsAuthenticated(true);
+        return true;
+      } else {
+        setUser(null);
+        setIsAuthenticated(false);
+        return false;
+      }
+    } catch (error) {
+      console.error('Auth refresh error:', error);
+      return false;
+    }
+  };
+
   // Check user role
   const hasRole = (role) => {
     return user && user.role === role;
@@ -129,6 +157,7 @@ export const AuthProvider = ({ children }) => {
     login,
     logout,
     updateProfile,
+    refreshAuth,
     hasRole,
     isAdmin,
     isRetailer,

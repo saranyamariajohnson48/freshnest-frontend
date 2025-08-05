@@ -93,6 +93,9 @@ const ClerkAuthWrapper = ({ children }) => {
           } else if (data.user.role === 'retailer' || data.user.role === 'Retailer') {
             console.log('Redirecting to retailer dashboard');
             navigate('/retailer/dashboard', { replace: true });
+          } else if (data.user.role === 'staff' || data.user.role === 'Staff') {
+            console.log('Redirecting to staff dashboard');
+            navigate('/staff/dashboard', { replace: true });
           } else if (data.user.role === 'user' || data.user.role === 'User') {
             console.log('Redirecting to user dashboard');
             navigate('/user/dashboard', { replace: true });

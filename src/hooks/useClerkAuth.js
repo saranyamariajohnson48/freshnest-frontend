@@ -105,6 +105,9 @@ export const useClerkAuth = () => {
         } else if (data.user && (data.user.role === 'retailer' || data.user.role === 'Retailer')) {
           console.log('Redirecting to retailer dashboard');
           navigate("/retailer/dashboard");
+        } else if (data.user && (data.user.role === 'staff' || data.user.role === 'Staff')) {
+          console.log('Redirecting to staff dashboard');
+          navigate("/staff/dashboard");
         } else if (data.user && (data.user.role === 'user' || data.user.role === 'User')) {
           console.log('Redirecting to user dashboard');
           navigate("/user/dashboard");
