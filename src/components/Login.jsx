@@ -180,7 +180,7 @@ const Login = () => {
         <div className="w-full pl-8 pr-24 grid lg:grid-cols-2 gap-8 items-center">
           {/* Left Side - Form */}
           <div className="relative">
-            <div className="bg-white/10 backdrop-blur-xl rounded-3xl p-8 lg:p-12 shadow-2xl border border-white/20">
+            <div className="bg-white/10 backdrop-blur-xl rounded-3xl p-8 lg:p-12 shadow-2xl border border-white/20 m-[4rem]">
               {/* Back Button */}
               <button 
                 onClick={() => navigate(-1)} 
@@ -345,11 +345,13 @@ const Login = () => {
           {/* Right Side - Visual */}
           <div className="hidden lg:block relative">
             <div className="relative h-full min-h-[600px] rounded-3xl overflow-hidden">
-              <img
+                 <img
                 src={img1}
                 alt="Fresh produce and groceries"
                 className="w-full h-full object-cover"
               />
+              
+             
               <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
               
 

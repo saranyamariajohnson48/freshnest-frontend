@@ -944,7 +944,7 @@ const AdminDashboard = () => {
 
           {/* Inventory Section */}
           {activeSection === 'inventory' && (
-            <div className="space-y-6 lg:space-y-8">
+            <div className="space-y-6 lg:space-y-8 pr-[10rem] pl-[10rem]">
               <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                 <div>
                   <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">Inventory Management</h1>
@@ -1112,7 +1112,7 @@ const AdminDashboard = () => {
 
           {/* Sales Section */}
           {activeSection === 'sales' && (
-            <div className="space-y-6 lg:space-y-8">
+            <div className="space-y-6 lg:space-y-8 pr-[10rem] pl-[10rem]">
               <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                 <div>
                   <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">Sales Management</h1>
@@ -1451,7 +1451,7 @@ const AdminDashboard = () => {
 
           {/* Settings Section */}
           {activeSection === 'settings' && (
-            <div className="space-y-6 lg:space-y-8">
+            <div className="space-y-6 lg:space-y-8 pr-[18.5rem] pl-[18.5rem]">
               <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                 <div>
                   <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">Settings</h1>
@@ -1509,7 +1509,7 @@ const AdminDashboard = () => {
 
           {/* Suppliers Section */}
           {activeSection === 'suppliers' && (
-            <div className="space-y-6 lg:space-y-8">
+            <div className="space-y-6 lg:space-y-8 pr-[12rem] pl-[12rem]">
               <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                 <div>
                   <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">Suppliers Management</h1>
@@ -1568,7 +1568,7 @@ const AdminDashboard = () => {
 
           {/* Staff Section */}
           {activeSection === 'staff' && (
-            <div className="space-y-6 lg:space-y-8">
+            <div className="space-y-6 lg:space-y-8 pr-[10rem] pl-[10rem]">
               <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                 <div>
                   <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">Staff Management</h1>
@@ -1640,7 +1640,7 @@ const AdminDashboard = () => {
 
           {/* Reports Section */}
           {activeSection === 'reports' && (
-            <div className="space-y-6 lg:space-y-8">
+            <div className="space-y-6 lg:space-y-8 pr-[16rem] pl-[16rem]">
               <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                 <div>
                   <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">Reports & Analytics</h1>
@@ -1699,7 +1699,7 @@ const AdminDashboard = () => {
 
           {/* Notifications Section */}
           {activeSection === 'notifications' && (
-            <div className="space-y-6 lg:space-y-8">
+            <div className="space-y-6 lg:space-y-8 pr-[20rem] pl-[20rem]">
               <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                 <div>
                   <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">Notifications</h1>

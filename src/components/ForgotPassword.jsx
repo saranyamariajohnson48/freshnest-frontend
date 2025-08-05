@@ -66,7 +66,7 @@ const ForgotPassword = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 flex items-center justify-center p-3 sm:p-4 md:p-6 lg:p-8">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 flex items-center justify-center pl-[31rem] pr-[31rem]">
       <div className="w-full max-w-xs sm:max-w-sm md:max-w-md">
         {/* Back Button */}
         <button 
