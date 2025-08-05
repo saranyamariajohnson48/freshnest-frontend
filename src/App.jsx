@@ -29,6 +29,8 @@ import ClerkDiagnostic from './components/ClerkDiagnostic';
 import ClerkTestPage from './components/ClerkTestPage';
 import SignOutHelper from './components/SignOutHelper';
 import ClerkAuthWrapper from './components/ClerkAuthWrapper';
+import GoogleRoleSelectionPage from './components/GoogleRoleSelectionPage';
+import ValidationTest from './components/ValidationTest';
 
 function Home() {
   return (
@@ -64,6 +66,8 @@ export default function App() {
           <Route path="/clerk-diagnostic" element={<ClerkDiagnostic />} />
           <Route path="/clerk-test-page" element={<ClerkTestPage />} />
           <Route path="/sign-out" element={<SignOutHelper />} />
+          <Route path="/google-role-selection" element={<GoogleRoleSelectionPage />} />
+          <Route path="/validation-test" element={<ValidationTest />} />
           
           {/* JWT Protected Routes */}
           <Route path="/dashboard" element={

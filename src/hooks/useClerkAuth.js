@@ -9,7 +9,7 @@ export const useClerkAuth = () => {
   const navigate = useNavigate();
   const { success, error } = useToastContext();
 
-  const handleGoogleSignIn = async (clerkUser) => {
+  const handleGoogleSignIn = async (clerkUser, selectedRole = null) => {
     try {
       // Validate required user data
       if (!clerkUser?.primaryEmailAddress?.emailAddress) {
@@ -27,10 +27,16 @@ export const useClerkAuth = () => {
         provider: 'google'
       };
 
+      // Add role if provided
+      if (selectedRole) {
+        userData.role = selectedRole;
+      }
+
       console.log('Processing Google sign-in with Clerk user:', {
         email: userData.email,
         fullName: userData.fullName,
-        clerkId: userData.clerkId
+        clerkId: userData.clerkId,
+        role: userData.role
       });
 
       // Send to your backend to create/login user
@@ -50,8 +56,29 @@ export const useClerkAuth = () => {
       const data = await response.json();
       console.log('Backend response data:', data);
 
+      // Handle role selection requirement
+      if (response.status === 202 && data.requiresRoleSelection) {
+        console.log('Role selection required for new user');
+        // Store temporary user data for role selection
+        sessionStorage.setItem('pendingGoogleUser', JSON.stringify({
+          clerkUser: {
+            id: clerkUser.id,
+            primaryEmailAddress: { emailAddress: clerkUser.primaryEmailAddress.emailAddress },
+            fullName: clerkUser.fullName,
+            firstName: clerkUser.firstName,
+            lastName: clerkUser.lastName,
+            imageUrl: clerkUser.imageUrl
+          },
+          userData: data
+        }));
+        
+        // Navigate to role selection
+        navigate('/google-role-selection');
+        return;
+      }
+
       if (!response.ok) {
-        throw new Error(data.message || `Server error: ${response.status}`);
+        throw new Error(data.message || data.error || `Server error: ${response.status}`);
       }
 
       // Validate response data

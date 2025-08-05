@@ -6,29 +6,12 @@ import img1 from "../assets/img1.jpg";
 import authService from "../services/authService";
 import { useToastContext } from "../contexts/ToastContext";
 import SimpleGoogleAuth from "./SimpleGoogleAuth";
-
-function validateEmail(email) {
-  if (!email || email.trim() === "") return "Email is required";
-  if (email.includes(" ")) return "Email cannot contain spaces";
-  const emailRegex = /^[a-z][a-z0-9]*(?:[-][a-z0-9]+)*@(gmail\.com|mca\.ajce\.in|yahoo\.com)$/;
-  if (!emailRegex.test(email)) return "Enter a valid email address (gmail.com, mca.ajce.in, or yahoo.com only)";
-  return "";
-}
-
-function validatePassword(password) {
-  if (!password || password.trim() === "") return "Password is required";
-  if (password.includes(" ")) return "Password cannot contain spaces";
-  if (password.length < 6) return "Password must be at least 6 characters";
-  
-  // For login, we're more lenient - just check basic requirements
-  // The server will validate the actual password match
-  return "";
-}
+import { validateEmail, validateLoginPassword } from "../utils/dynamicValidation";
 
 const Login = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { success, error } = useToastContext();
+  const { success, error: showError } = useToastContext();
   const role = searchParams.get('role');
   const [form, setForm] = useState({ email: "", password: "" });
   const [errors, setErrors] = useState({});
@@ -39,8 +22,26 @@ const Login = () => {
 
   function handleChange(e) {
     setForm({ ...form, [e.target.name]: e.target.value });
-    setErrors({ ...errors, [e.target.name]: "" });
+    // Clear error when user starts typing
+    if (errors[e.target.name]) {
+      setErrors({ ...errors, [e.target.name]: "" });
+    }
     setServerError("");
+  }
+
+  function handleBlur(e) {
+    const { name, value } = e.target;
+    let validationError = "";
+    
+    if (name === "email") {
+      validationError = validateEmail(value);
+    } else if (name === "password") {
+      validationError = validateLoginPassword(value);
+    }
+    
+    if (validationError) {
+      setErrors({ ...errors, [name]: validationError });
+    }
   }
 
 
@@ -49,7 +50,7 @@ const Login = () => {
     e.preventDefault();
     const newErrors = {
       email: validateEmail(form.email),
-      password: validatePassword(form.password),
+      password: validateLoginPassword(form.password),
     };
     setErrors(newErrors);
     if (newErrors.email || newErrors.password) return;
@@ -118,20 +119,26 @@ const Login = () => {
       const errorMessage = error.message.toLowerCase();
       let displayMessage = "";
       
-      if (errorMessage.includes('verify your email')) {
-        displayMessage = "Please verify your email address before logging in. Check your inbox for the verification link.";
-      } else if (errorMessage.includes('server error')) {
-        displayMessage = "Server is currently unavailable. Please try again later or contact support.";
-      } else if (errorMessage.includes('invalid')) {
-        displayMessage = "Invalid email or password. Please check your credentials and try again.";
-      } else if (errorMessage.includes('not found')) {
-        displayMessage = "Account not found. Please check your email or sign up for a new account.";
+      if (errorMessage.includes('verify your email') || errorMessage.includes('email not verified')) {
+        displayMessage = "⚠️ Please verify your email address before logging in. Check your inbox for the verification link.";
+      } else if (errorMessage.includes('rate limit') || errorMessage.includes('too many')) {
+        displayMessage = "🚫 Too many login attempts. Please wait a few minutes before trying again.";
+      } else if (errorMessage.includes('server error') || errorMessage.includes('server is')) {
+        displayMessage = "🔧 Server is currently unavailable. Please try again later or contact support.";
+      } else if (errorMessage.includes('invalid credentials') || errorMessage.includes('invalid email or password') || errorMessage.includes('invalid')) {
+        displayMessage = "❌ Invalid login credentials. Please check your email and password and try again.";
+      } else if (errorMessage.includes('not found') || errorMessage.includes('user not found')) {
+        displayMessage = "👤 Account not found. Please check your email or sign up for a new account.";
+      } else if (errorMessage.includes('password must be')) {
+        displayMessage = "🔒 " + error.message;
+      } else if (errorMessage.includes('email format') || errorMessage.includes('invalid email format')) {
+        displayMessage = "📧 Please enter a valid email address.";
       } else {
-        displayMessage = error.message || "Login failed. Please try again.";
+        displayMessage = "❌ Login failed. " + (error.message || "Please try again.");
       }
       
       // Show error toast
-      error(displayMessage, { duration: 5000 });
+      showError(displayMessage, { duration: 5000 });
       setServerError(displayMessage);
       
       // Log additional debugging information
@@ -226,6 +233,7 @@ const Login = () => {
                       style={{focusRingColor: '#437057'}}
                       value={form.email}
                       onChange={handleChange}
+                      onBlur={handleBlur}
                     />
                     <div className="absolute right-4 top-1/2 transform -translate-y-1/2">
                       <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -251,6 +259,7 @@ const Login = () => {
                       style={{focusRingColor: '#437057'}}
                       value={form.password}
                       onChange={handleChange}
+                      onBlur={handleBlur}
                     />
                     <div className="absolute right-4 top-1/2 transform -translate-y-1/2">
                       <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">

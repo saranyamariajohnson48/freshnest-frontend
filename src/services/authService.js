@@ -212,7 +212,17 @@ class AuthService {
         
         // Handle specific error cases
         if (response.status === 401) {
-          throw new Error('Invalid email or password');
+          // Use the exact error message from backend, fallback to generic message
+          const errorMsg = data.error || data.message || 'Invalid credentials';
+          throw new Error(errorMsg);
+        } else if (response.status === 400) {
+          // Bad request - validation errors
+          const errorMsg = data.error || data.message || 'Invalid input';
+          throw new Error(errorMsg);
+        } else if (response.status === 429) {
+          // Rate limiting
+          const errorMsg = data.error || 'Too many login attempts. Please try again later.';
+          throw new Error(errorMsg);
         } else if (response.status === 404) {
           throw new Error('User not found');
         } else if (response.status === 500) {

@@ -3,66 +3,13 @@ import { useNavigate } from "react-router-dom";
 import { API_BASE_URL } from "../api";
 import img1 from "../assets/img1.jpg";
 import { useToastContext } from "../contexts/ToastContext";
-
-// Validation functions
-function validateFullName(fullName) {
-  if (!fullName || fullName.trim() === "") return "Full Name is required";
-  if (fullName.charAt(0) === " ") return "Full Name cannot start with a space";
-  if (/[0-9]/.test(fullName)) return "Numbers are not allowed in the name";
-  if (!/^[A-Z]/.test(fullName)) return "First letter of Full Name must be capital";
-  
-  const validNameRegex = /^[a-zA-Z' ]+$/;
-  if (!validNameRegex.test(fullName) || /\s{2,}/.test(fullName)) {
-    return "Full Name should only contain letters, and single spaces";
-  }
-  
-  const regSpecialChars = /[!@#$%^&*()_+{}\[\]:;<>,.?~\\/-]/;
-  if (regSpecialChars.test(fullName)) return "Special characters are not allowed in the name";
-  
-  return "";
-}
-
-function validateEmail(email) {
-  if (!email || email.trim() === "") return "Email is required";
-  if (email.includes(" ")) return "Email cannot contain spaces";
-  const emailRegex = /^[a-z][a-z0-9]*(?:[-][a-z0-9]+)*@(gmail\.com|mca\.ajce\.in|yahoo\.com)$/;
-  if (!emailRegex.test(email)) return "Enter a valid email address (gmail.com, mca.ajce.in, or yahoo.com only)";
-  return "";
-}
-
-function validatePassword(password) {
-  if (!password || password.trim() === "") return "Password is required";
-  if (password.includes(" ")) return "Password cannot contain spaces";
-  if (password.length < 6) return "Password must be at least 6 characters";
-  
-  const hasUppercase = /[A-Z]/.test(password);
-  const hasLowercase = /[a-z]/.test(password);
-  const hasDigit = /\d/.test(password);
-  const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(password);
-  
-  if (!(hasUppercase && hasLowercase && hasDigit && hasSpecialChar)) {
-    return "Password should include at least one uppercase letter, one lowercase letter, one digit, and one special character";
-  }
-  return "";
-}
-
-function validateConfirmPassword(password, confirmPassword) {
-  if (!confirmPassword || confirmPassword.trim() === "") return "Confirm Password is required";
-  if (confirmPassword !== password) return "Passwords do not match";
-  return "";
-}
-
-// Phone validation function
-function validatePhone(phone) {
-  if (!phone || phone.trim() === "") return "Phone number is required";
-  const phoneRegex = /^(\+91[6-9][0-9]{9}|[6789][0-9]{9})$/;
-  if (!phoneRegex.test(phone)) return "Enter a valid phone number";
-  
-  const repeatingDigitsRegex = /(\d)\1{9}/;
-  if (repeatingDigitsRegex.test(phone)) return "Phone number cannot contain repeating digits";
-  
-  return "";
-}
+import { 
+  validateFullName, 
+  validateEmail, 
+  validatePhone,
+  validatePassword, 
+  validateConfirmPassword 
+} from "../utils/dynamicValidation";
 
 export default function RetailerSignup() {
   const { success, error } = useToastContext();
@@ -86,8 +33,32 @@ export default function RetailerSignup() {
       ...f,
       [name]: type === "checkbox" ? checked : value,
     }));
-    setErrors({ ...errors, [name]: "" });
+    // Clear error when user starts typing
+    if (errors[name]) {
+      setErrors({ ...errors, [name]: "" });
+    }
     setServerError("");
+  }
+
+  function handleBlur(e) {
+    const { name, value } = e.target;
+    let error = "";
+    
+    if (name === "fullName") {
+      error = validateFullName(value);
+    } else if (name === "email") {
+      error = validateEmail(value);
+    } else if (name === "phone") {
+      error = validatePhone(value);
+    } else if (name === "password") {
+      error = validatePassword(value);
+    } else if (name === "confirmPassword") {
+      error = validateConfirmPassword(value, form);
+    }
+    
+    if (error) {
+      setErrors({ ...errors, [name]: error });
+    }
   }
 
   async function handleSubmit(e) {
@@ -99,7 +70,7 @@ export default function RetailerSignup() {
       email: validateEmail(form.email),
       phone: validatePhone(form.phone),
       password: validatePassword(form.password),
-      confirmPassword: validateConfirmPassword(form.password, form.confirmPassword),
+      confirmPassword: validateConfirmPassword(form.confirmPassword, form),
     };
     
     setErrors(newErrors);
@@ -216,6 +187,7 @@ export default function RetailerSignup() {
                         style={{focusRingColor: '#437057'}}
                 value={form.fullName}
                 onChange={handleChange}
+                onBlur={handleBlur}
               />
                       <div className="absolute right-4 top-1/2 transform -translate-y-1/2">
                         <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -243,6 +215,7 @@ export default function RetailerSignup() {
                         style={{focusRingColor: '#437057'}}
                 value={form.email}
                 onChange={handleChange}
+                onBlur={handleBlur}
               />
                       <div className="absolute right-4 top-1/2 transform -translate-y-1/2">
                         <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -270,6 +243,7 @@ export default function RetailerSignup() {
                         style={{focusRingColor: '#437057'}}
                 value={form.phone}
                 onChange={handleChange}
+                onBlur={handleBlur}
               />
                       <div className="absolute right-4 top-1/2 transform -translate-y-1/2">
                         <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -297,6 +271,7 @@ export default function RetailerSignup() {
                         style={{focusRingColor: '#437057'}}
                 value={form.password}
                 onChange={handleChange}
+                onBlur={handleBlur}
               />
                       <div className="absolute right-4 top-1/2 transform -translate-y-1/2">
                         <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -320,9 +295,11 @@ export default function RetailerSignup() {
                 type="password"
                 name="confirmPassword"
                 placeholder="Confirm Password"
-                className="w-full px-6 py-4 bg-white/10 border border-white/20 rounded-2xl text-white placeholder-emerald-200 focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-transparent transition-all duration-300 backdrop-blur-sm"
+                className="w-full px-6 py-4 bg-white/10 border border-white/20 rounded-2xl text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:border-transparent transition-all duration-300 backdrop-blur-sm"
+                style={{focusRingColor: '#437057'}}
                 value={form.confirmPassword}
                 onChange={handleChange}
+                onBlur={handleBlur}
               />
                       <div className="absolute right-4 top-1/2 transform -translate-y-1/2">
                         <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
