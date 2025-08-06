@@ -5,8 +5,11 @@ import authService from '../services/authService';
 import { useToastContext } from '../contexts/ToastContext';
 import AddStaffForm from './AddStaffForm';
 import StaffList from './StaffList';
+import AddSupplierForm from './AddSupplierForm';
+import SupplierList from './SupplierList';
 import tokenManager from '../utils/tokenManager';
 import announcementService from '../services/announcementService';
+
 import { 
   FiHome, 
   FiPackage, 
@@ -79,6 +82,12 @@ const AdminDashboard = () => {
   const [timeRange, setTimeRange] = useState('7d');
   const [showAddStaffForm, setShowAddStaffForm] = useState(false);
   const [staffRefreshTrigger, setStaffRefreshTrigger] = useState(0);
+  
+  // Supplier states
+  const [showAddSupplierForm, setShowAddSupplierForm] = useState(false);
+  const [supplierRefreshTrigger, setSupplierRefreshTrigger] = useState(0);
+  
+
   
   // Announcement states
   const [announcements, setAnnouncements] = useState([]);
@@ -235,6 +244,20 @@ const AdminDashboard = () => {
   const handleStaffCreated = (newStaff) => {
     setStaffRefreshTrigger(prev => prev + 1);
     setShowAddStaffForm(false);
+  };
+
+  // Supplier management handlers
+  const handleAddSupplier = () => {
+    setShowAddSupplierForm(true);
+  };
+
+  const handleSupplierFormClose = () => {
+    setShowAddSupplierForm(false);
+  };
+
+  const handleSupplierCreated = (newSupplier) => {
+    setSupplierRefreshTrigger(prev => prev + 1);
+    setShowAddSupplierForm(false);
   };
 
   // Announcement management handlers
@@ -1630,42 +1653,7 @@ const AdminDashboard = () => {
             </div>
           )}
 
-          {activeSection === 'suppliers' && (
-            <div className="space-y-8">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h1 className="text-3xl font-bold text-gray-900">Supplier Management</h1>
-                  <p className="text-gray-600 mt-1">Manage suppliers, purchase orders, and vendor relationships.</p>
-                </div>
-                <div className="flex items-center space-x-3">
-                  <button className="bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700 transition-colors flex items-center space-x-2">
-                    <span className="text-lg">+</span>
-                    <span>Add Supplier</span>
-                  </button>
-                </div>
-              </div>
-              
-              <div className="bg-white rounded-2xl border border-gray-200 p-8 text-center">
-                <FiTruck className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-xl font-semibold text-gray-900 mb-2">Supplier Module</h3>
-                <p className="text-gray-500 mb-6">Vendor management and procurement tools coming soon.</p>
-                <div className="flex items-center justify-center space-x-4">
-                  <div className="text-center">
-                    <p className="text-2xl font-bold text-emerald-600">24</p>
-                    <p className="text-sm text-gray-500">Active Suppliers</p>
-                  </div>
-                  <div className="text-center">
-                    <p className="text-2xl font-bold text-blue-600">8</p>
-                    <p className="text-sm text-gray-500">Pending Orders</p>
-                  </div>
-                  <div className="text-center">
-                    <p className="text-2xl font-bold text-green-600">$125K</p>
-                    <p className="text-sm text-gray-500">Monthly Spend</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
+
 
           {activeSection === 'reports' && (
             <div className="space-y-8">
@@ -1815,60 +1803,29 @@ const AdminDashboard = () => {
 
           {/* Suppliers Section */}
           {activeSection === 'suppliers' && (
-            <div className="space-y-6 lg:space-y-8 pr-[12rem] pl-[12rem]">
+            <div className="space-y-6 lg:space-y-8 pr-[10rem] pl-[10rem]">
+
               <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                 <div>
-                  <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">Suppliers Management</h1>
+                  <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">Supplier Management</h1>
                   <p className="text-gray-600 mt-1 text-sm lg:text-base">Manage supplier relationships and procurement.</p>
                 </div>
                 <div className="flex items-center space-x-3">
-                  <button className="bg-emerald-600 text-white px-3 lg:px-4 py-2 rounded-lg hover:bg-emerald-700 transition-colors text-sm lg:text-base">
+                  <button 
+                    onClick={handleAddSupplier}
+                    className="bg-emerald-600 text-white px-3 lg:px-4 py-2 rounded-lg hover:bg-emerald-700 transition-colors text-sm lg:text-base flex items-center space-x-2"
+                  >
+                    <FiTruck className="w-4 h-4" />
                     <span className="hidden sm:inline">Add Supplier</span>
                     <span className="sm:hidden">Add</span>
                   </button>
                 </div>
               </div>
               
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6">
-                <div className="bg-white rounded-xl border border-gray-200 p-4 lg:p-6">
-                  <div className="flex items-center space-x-3 mb-4">
-                    <div className="p-2 rounded-lg bg-blue-50">
-                      <FiTruck className="w-5 h-5 text-blue-600" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-gray-600">Active Suppliers</p>
-                    </div>
-                  </div>
-                  <p className="text-xl lg:text-2xl font-bold text-gray-900">24</p>
-                  <p className="text-sm text-blue-600 font-medium">+2 this month</p>
-                </div>
-                
-                <div className="bg-white rounded-xl border border-gray-200 p-4 lg:p-6">
-                  <div className="flex items-center space-x-3 mb-4">
-                    <div className="p-2 rounded-lg bg-green-50">
-                      <FiCheck className="w-5 h-5 text-green-600" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-gray-600">Deliveries This Week</p>
-                    </div>
-                  </div>
-                  <p className="text-xl lg:text-2xl font-bold text-gray-900">18</p>
-                  <p className="text-sm text-green-600 font-medium">On schedule</p>
-                </div>
-                
-                <div className="bg-white rounded-xl border border-gray-200 p-4 lg:p-6">
-                  <div className="flex items-center space-x-3 mb-4">
-                    <div className="p-2 rounded-lg bg-purple-50">
-                      <FiDollarSign className="w-5 h-5 text-purple-600" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-gray-600">Total Spend</p>
-                    </div>
-                  </div>
-                  <p className="text-xl lg:text-2xl font-bold text-gray-900">$45.2K</p>
-                  <p className="text-sm text-purple-600 font-medium">This month</p>
-                </div>
-              </div>
+              <SupplierList 
+                onAddSupplier={handleAddSupplier}
+                refreshTrigger={supplierRefreshTrigger}
+              />
             </div>
           )}
 
@@ -2036,6 +1993,13 @@ const AdminDashboard = () => {
         isOpen={showAddStaffForm}
         onClose={handleStaffFormClose}
         onSuccess={handleStaffCreated}
+      />
+
+      {/* Add Supplier Form Modal */}
+      <AddSupplierForm
+        isOpen={showAddSupplierForm}
+        onClose={handleSupplierFormClose}
+        onSupplierCreated={handleSupplierCreated}
       />
 
       {/* Announcement Form Modal */}
