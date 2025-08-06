@@ -6,6 +6,7 @@ import { useToastContext } from '../contexts/ToastContext';
 import AddStaffForm from './AddStaffForm';
 import StaffList from './StaffList';
 import tokenManager from '../utils/tokenManager';
+import announcementService from '../services/announcementService';
 import { 
   FiHome, 
   FiPackage, 
@@ -35,7 +36,13 @@ import {
   FiAlertTriangle,
   FiCheck,
   FiUserCheck,
-  FiPieChart
+  FiPieChart,
+  FiMessageSquare,
+  FiEdit3,
+  FiTrash2,
+  FiPlus,
+  FiEye,
+  FiSend
 } from 'react-icons/fi';
 import { Line, Bar, Doughnut } from 'react-chartjs-2';
 import {
@@ -72,6 +79,20 @@ const AdminDashboard = () => {
   const [timeRange, setTimeRange] = useState('7d');
   const [showAddStaffForm, setShowAddStaffForm] = useState(false);
   const [staffRefreshTrigger, setStaffRefreshTrigger] = useState(0);
+  
+  // Announcement states
+  const [announcements, setAnnouncements] = useState([]);
+  const [showAnnouncementForm, setShowAnnouncementForm] = useState(false);
+  const [editingAnnouncement, setEditingAnnouncement] = useState(null);
+  const [announcementForm, setAnnouncementForm] = useState({
+    title: '',
+    content: '',
+    type: 'info', // info, warning, success, error
+    priority: 'normal', // low, normal, high, urgent
+    targetAudience: 'all', // all, staff, retailers, users
+    expiresAt: '',
+    isActive: true
+  });
 
   // Handle responsive sidebar behavior and token management
   useEffect(() => {
@@ -97,6 +118,63 @@ const AdminDashboard = () => {
       window.removeEventListener('resize', handleResize);
       tokenManager.stopAutoRefresh();
     };
+  }, []);
+
+  // Load announcements from service
+  useEffect(() => {
+    const loadAnnouncements = () => {
+      const storedAnnouncements = announcementService.getAnnouncements();
+      
+      // If no announcements exist, create sample data
+      if (storedAnnouncements.length === 0) {
+        const sampleAnnouncements = [
+          {
+            title: 'System Maintenance Scheduled',
+            content: 'We will be performing system maintenance on Sunday, December 15th from 2:00 AM to 4:00 AM. During this time, the system may be temporarily unavailable.',
+            type: 'warning',
+            priority: 'high',
+            targetAudience: 'all',
+            isActive: true,
+            createdBy: 'Admin',
+            expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
+          },
+          {
+            title: 'New Holiday Policy',
+            content: 'Please review the updated holiday policy for 2024. All staff members are required to submit their holiday requests by the end of this month.',
+            type: 'info',
+            priority: 'normal',
+            targetAudience: 'staff',
+            isActive: true,
+            createdBy: 'Admin'
+          },
+          {
+            title: 'Inventory Update Complete',
+            content: 'The quarterly inventory update has been completed successfully. All product counts have been verified and updated in the system.',
+            type: 'success',
+            priority: 'low',
+            targetAudience: 'all',
+            isActive: false,
+            createdBy: 'Admin'
+          }
+        ];
+        
+        // Add sample announcements to service
+        sampleAnnouncements.forEach(announcement => {
+          announcementService.addAnnouncement(announcement);
+        });
+      }
+      
+      setAnnouncements(announcementService.getAnnouncements());
+    };
+
+    loadAnnouncements();
+
+    // Subscribe to announcement changes
+    const unsubscribe = announcementService.subscribe((updatedAnnouncements) => {
+      setAnnouncements(updatedAnnouncements);
+    });
+
+    return unsubscribe;
   }, []);
 
   const navigate = useNavigate();
@@ -157,6 +235,94 @@ const AdminDashboard = () => {
   const handleStaffCreated = (newStaff) => {
     setStaffRefreshTrigger(prev => prev + 1);
     setShowAddStaffForm(false);
+  };
+
+  // Announcement management handlers
+  const handleAddAnnouncement = () => {
+    setEditingAnnouncement(null);
+    setAnnouncementForm({
+      title: '',
+      content: '',
+      type: 'info',
+      priority: 'normal',
+      targetAudience: 'all',
+      expiresAt: '',
+      isActive: true
+    });
+    setShowAnnouncementForm(true);
+  };
+
+  const handleEditAnnouncement = (announcement) => {
+    setEditingAnnouncement(announcement);
+    setAnnouncementForm({
+      title: announcement.title,
+      content: announcement.content,
+      type: announcement.type,
+      priority: announcement.priority,
+      targetAudience: announcement.targetAudience,
+      expiresAt: announcement.expiresAt || '',
+      isActive: announcement.isActive
+    });
+    setShowAnnouncementForm(true);
+  };
+
+  const handleDeleteAnnouncement = (announcementId) => {
+    if (window.confirm('Are you sure you want to delete this announcement?')) {
+      if (announcementService.deleteAnnouncement(announcementId)) {
+        success('Announcement deleted successfully');
+      } else {
+        error('Failed to delete announcement');
+      }
+    }
+  };
+
+  const handleAnnouncementFormSubmit = (e) => {
+    e.preventDefault();
+    
+    if (!announcementForm.title.trim() || !announcementForm.content.trim()) {
+      error('Please fill in all required fields');
+      return;
+    }
+
+    const announcementData = {
+      ...announcementForm,
+      createdBy: 'Admin' // In real app, get from auth context
+    };
+
+    let result;
+    if (editingAnnouncement) {
+      result = announcementService.updateAnnouncement(editingAnnouncement.id, announcementData);
+      if (result) {
+        success('Announcement updated successfully');
+      } else {
+        error('Failed to update announcement');
+      }
+    } else {
+      result = announcementService.addAnnouncement(announcementData);
+      if (result) {
+        success('Announcement created successfully');
+      } else {
+        error('Failed to create announcement');
+      }
+    }
+
+    if (result) {
+      setShowAnnouncementForm(false);
+      setEditingAnnouncement(null);
+    }
+  };
+
+  const handleAnnouncementFormClose = () => {
+    setShowAnnouncementForm(false);
+    setEditingAnnouncement(null);
+  };
+
+  const toggleAnnouncementStatus = (announcementId) => {
+    if (announcementService.toggleAnnouncementStatus(announcementId)) {
+      success('Announcement status updated');
+    } else {
+      error('Failed to update announcement status');
+    }
   };
   
   const [stats, setStats] = useState({
@@ -263,6 +429,7 @@ const AdminDashboard = () => {
     { id: 'inventory', label: 'Inventory', icon: FiPackage, badge: '23' },
     { id: 'sales', label: 'Sales', icon: FiShoppingCart, badge: null },
     { id: 'staff', label: 'Staff', icon: FiUsers, badge: null },
+    { id: 'announcements', label: 'Announcements', icon: FiMessageSquare, badge: announcements.filter(a => a.isActive).length.toString() },
     { id: 'suppliers', label: 'Suppliers', icon: FiTruck, badge: null },
     { id: 'reports', label: 'Reports', icon: FiBarChart2, badge: null },
   ];
@@ -1349,6 +1516,120 @@ const AdminDashboard = () => {
             </div>
           )}
 
+          {activeSection === 'announcements' && (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h1 className="text-3xl font-bold text-gray-900">Announcements</h1>
+                  <p className="text-gray-600 mt-1">Create and manage announcements for your team and users.</p>
+                </div>
+                <button
+                  onClick={handleAddAnnouncement}
+                  className="bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700 transition-colors flex items-center space-x-2"
+                >
+                  <FiPlus className="w-4 h-4" />
+                  <span>New Announcement</span>
+                </button>
+              </div>
+
+              {/* Announcements List */}
+              <div className="grid gap-4">
+                {announcements.length === 0 ? (
+                  <div className="bg-white rounded-2xl border border-gray-200 p-8 text-center">
+                    <FiMessageSquare className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                    <h3 className="text-xl font-semibold text-gray-900 mb-2">No Announcements</h3>
+                    <p className="text-gray-500 mb-6">Create your first announcement to communicate with your team.</p>
+                    <button
+                      onClick={handleAddAnnouncement}
+                      className="bg-emerald-600 text-white px-6 py-2 rounded-lg hover:bg-emerald-700 transition-colors"
+                    >
+                      Create Announcement
+                    </button>
+                  </div>
+                ) : (
+                  announcements.map((announcement) => (
+                    <div key={announcement.id} className="bg-white rounded-xl border border-gray-200 p-6 hover:shadow-lg transition-all duration-200">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center space-x-3 mb-3">
+                            <div className={`p-2 rounded-lg ${
+                              announcement.type === 'success' ? 'bg-green-50' :
+                              announcement.type === 'warning' ? 'bg-yellow-50' :
+                              announcement.type === 'error' ? 'bg-red-50' : 'bg-blue-50'
+                            }`}>
+                              <FiMessageSquare className={`w-4 h-4 ${
+                                announcement.type === 'success' ? 'text-green-600' :
+                                announcement.type === 'warning' ? 'text-yellow-600' :
+                                announcement.type === 'error' ? 'text-red-600' : 'text-blue-600'
+                              }`} />
+                            </div>
+                            <div>
+                              <h3 className="text-lg font-semibold text-gray-900">{announcement.title}</h3>
+                              <div className="flex items-center space-x-4 text-sm text-gray-500">
+                                <span>By {announcement.createdBy}</span>
+                                <span>•</span>
+                                <span>{new Date(announcement.createdAt).toLocaleDateString()}</span>
+                                <span>•</span>
+                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                  announcement.priority === 'urgent' ? 'bg-red-100 text-red-700' :
+                                  announcement.priority === 'high' ? 'bg-orange-100 text-orange-700' :
+                                  announcement.priority === 'normal' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700'
+                                }`}>
+                                  {announcement.priority}
+                                </span>
+                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                  announcement.targetAudience === 'all' ? 'bg-purple-100 text-purple-700' :
+                                  announcement.targetAudience === 'staff' ? 'bg-green-100 text-green-700' :
+                                  announcement.targetAudience === 'retailers' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700'
+                                }`}>
+                                  {announcement.targetAudience}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                          <p className="text-gray-700 mb-4 leading-relaxed">{announcement.content}</p>
+                          {announcement.expiresAt && (
+                            <p className="text-sm text-gray-500">
+                              Expires: {new Date(announcement.expiresAt).toLocaleDateString()}
+                            </p>
+                          )}
+                        </div>
+                        <div className="flex items-center space-x-2 ml-4">
+                          <div className={`px-2 py-1 rounded-full text-xs font-medium ${
+                            announcement.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
+                          }`}>
+                            {announcement.isActive ? 'Active' : 'Inactive'}
+                          </div>
+                          <button
+                            onClick={() => toggleAnnouncementStatus(announcement.id)}
+                            className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100"
+                            title={announcement.isActive ? 'Deactivate' : 'Activate'}
+                          >
+                            <FiEye className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleEditAnnouncement(announcement)}
+                            className="p-2 text-gray-400 hover:text-blue-600 rounded-lg hover:bg-blue-50"
+                            title="Edit"
+                          >
+                            <FiEdit3 className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteAnnouncement(announcement.id)}
+                            className="p-2 text-gray-400 hover:text-red-600 rounded-lg hover:bg-red-50"
+                            title="Delete"
+                          >
+                            <FiTrash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          )}
+
           {activeSection === 'suppliers' && (
             <div className="space-y-8">
               <div className="flex items-center justify-between">
@@ -1729,7 +2010,7 @@ const AdminDashboard = () => {
           )}
 
           {/* Fallback for any other sections */}
-          {!['dashboard', 'inventory', 'sales', 'staff', 'suppliers', 'reports', 'notifications', 'settings'].includes(activeSection) && (
+          {!['dashboard', 'inventory', 'sales', 'staff', 'announcements', 'suppliers', 'reports', 'notifications', 'settings'].includes(activeSection) && (
             <div className="flex items-center justify-center h-full">
               <div className="text-center">
                 <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
@@ -1756,6 +2037,155 @@ const AdminDashboard = () => {
         onClose={handleStaffFormClose}
         onSuccess={handleStaffCreated}
       />
+
+      {/* Announcement Form Modal */}
+      {showAnnouncementForm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+          <div className="bg-white rounded-2xl p-6 max-w-2xl w-full mx-4 shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold text-gray-900">
+                {editingAnnouncement ? 'Edit Announcement' : 'Create New Announcement'}
+              </h2>
+              <button
+                onClick={handleAnnouncementFormClose}
+                className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100"
+              >
+                <FiX className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleAnnouncementFormSubmit} className="space-y-6">
+              {/* Title */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Title *
+                </label>
+                <input
+                  type="text"
+                  value={announcementForm.title}
+                  onChange={(e) => setAnnouncementForm(prev => ({ ...prev, title: e.target.value }))}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                  placeholder="Enter announcement title"
+                  required
+                />
+              </div>
+
+              {/* Content */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Content *
+                </label>
+                <textarea
+                  value={announcementForm.content}
+                  onChange={(e) => setAnnouncementForm(prev => ({ ...prev, content: e.target.value }))}
+                  rows={4}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                  placeholder="Enter announcement content"
+                  required
+                />
+              </div>
+
+              {/* Type and Priority */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Type
+                  </label>
+                  <select
+                    value={announcementForm.type}
+                    onChange={(e) => setAnnouncementForm(prev => ({ ...prev, type: e.target.value }))}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                  >
+                    <option value="info">Info</option>
+                    <option value="success">Success</option>
+                    <option value="warning">Warning</option>
+                    <option value="error">Error</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Priority
+                  </label>
+                  <select
+                    value={announcementForm.priority}
+                    onChange={(e) => setAnnouncementForm(prev => ({ ...prev, priority: e.target.value }))}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                  >
+                    <option value="low">Low</option>
+                    <option value="normal">Normal</option>
+                    <option value="high">High</option>
+                    <option value="urgent">Urgent</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Target Audience and Expiry */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Target Audience
+                  </label>
+                  <select
+                    value={announcementForm.targetAudience}
+                    onChange={(e) => setAnnouncementForm(prev => ({ ...prev, targetAudience: e.target.value }))}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                  >
+                    <option value="all">All Users</option>
+                    <option value="staff">Staff Only</option>
+                    <option value="retailers">Retailers Only</option>
+                    <option value="users">Regular Users Only</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Expires At (Optional)
+                  </label>
+                  <input
+                    type="datetime-local"
+                    value={announcementForm.expiresAt}
+                    onChange={(e) => setAnnouncementForm(prev => ({ ...prev, expiresAt: e.target.value }))}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                  />
+                </div>
+              </div>
+
+              {/* Active Status */}
+              <div className="flex items-center space-x-3">
+                <input
+                  type="checkbox"
+                  id="isActive"
+                  checked={announcementForm.isActive}
+                  onChange={(e) => setAnnouncementForm(prev => ({ ...prev, isActive: e.target.checked }))}
+                  className="w-4 h-4 text-emerald-600 border-gray-300 rounded focus:ring-emerald-500"
+                />
+                <label htmlFor="isActive" className="text-sm font-medium text-gray-700">
+                  Active (visible to users)
+                </label>
+              </div>
+
+              {/* Form Actions */}
+              <div className="flex items-center justify-end space-x-3 pt-4 border-t border-gray-200">
+                <button
+                  type="button"
+                  onClick={handleAnnouncementFormClose}
+                  className="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg font-medium transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-6 py-2 text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg font-medium transition-colors flex items-center space-x-2"
+                >
+                  <FiSend className="w-4 h-4" />
+                  <span>{editingAnnouncement ? 'Update' : 'Create'} Announcement</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

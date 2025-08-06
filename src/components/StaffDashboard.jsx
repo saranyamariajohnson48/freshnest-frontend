@@ -4,6 +4,8 @@ import { useClerk } from '@clerk/clerk-react';
 import authService from '../services/authService';
 import { useToastContext } from '../contexts/ToastContext';
 import tokenManager from '../utils/tokenManager';
+import { useAuth } from '../hooks/useAuth';
+import announcementService from '../services/announcementService';
 import { 
   FiHome, 
   FiClock, 
@@ -43,7 +45,8 @@ import {
 const StaffDashboard = () => {
   const navigate = useNavigate();
   const { signOut } = useClerk();
-  const { showToast } = useToastContext();
+  const { success: showSuccess, error: showError, warning: showWarning, info: showInfo } = useToastContext();
+  const { user: authUser, logout: authLogout } = useAuth();
   
   // State management
   const [user, setUser] = useState(null);
@@ -51,6 +54,7 @@ const StaffDashboard = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeSection, setActiveSection] = useState('dashboard');
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   
   // Dashboard data states
   const [attendanceData, setAttendanceData] = useState({
@@ -72,6 +76,7 @@ const StaffDashboard = () => {
   
   const [notifications, setNotifications] = useState([]);
   const [stockActivity, setStockActivity] = useState([]);
+  const [announcements, setAnnouncements] = useState([]);
 
   // Update time every minute
   useEffect(() => {
@@ -85,25 +90,73 @@ const StaffDashboard = () => {
   useEffect(() => {
     const loadUserData = async () => {
       try {
-        const userData = authService.getCurrentUser();
-        if (!userData || userData.role !== 'staff') {
-          showToast('Access denied. Staff access required.', 'error');
+        // Use auth context user data
+        if (!authUser || authUser.role !== 'staff') {
+          showError('Access denied. Staff access required.');
           navigate('/login');
           return;
         }
         
-        setUser(userData);
-        await loadDashboardData(userData);
+        setUser(authUser);
+        
+        // Start token auto-refresh for authenticated user
+        tokenManager.startAutoRefresh();
+        
+        await loadDashboardData(authUser);
       } catch (error) {
         console.error('Error loading user data:', error);
-        showToast('Failed to load dashboard data', 'error');
+        showError('Failed to load dashboard data');
       } finally {
         setLoading(false);
       }
     };
 
-    loadUserData();
-  }, [navigate, showToast]);
+    if (authUser) {
+      loadUserData();
+    } else {
+      setLoading(false);
+    }
+    
+    // Cleanup function to stop auto-refresh when component unmounts
+    return () => {
+      tokenManager.stopAutoRefresh();
+    };
+  }, [authUser, navigate, showError]);
+
+  // Load announcements for staff
+  useEffect(() => {
+    const loadAnnouncements = () => {
+      // Get announcements targeted for staff or all users
+      const staffAnnouncements = announcementService.getActiveAnnouncements('staff');
+      const allAnnouncements = announcementService.getActiveAnnouncements('all');
+      
+      // Combine and sort by priority and date
+      const combinedAnnouncements = [...staffAnnouncements, ...allAnnouncements]
+        .filter((announcement, index, self) => 
+          index === self.findIndex(a => a.id === announcement.id)
+        )
+        .sort((a, b) => {
+          // Sort by priority first (urgent > high > normal > low)
+          const priorityOrder = { urgent: 4, high: 3, normal: 2, low: 1 };
+          const priorityDiff = priorityOrder[b.priority] - priorityOrder[a.priority];
+          if (priorityDiff !== 0) return priorityDiff;
+          
+          // Then by creation date (newest first)
+          return new Date(b.createdAt) - new Date(a.createdAt);
+        });
+      
+      setAnnouncements(combinedAnnouncements);
+    };
+
+    loadAnnouncements();
+
+    // Subscribe to announcement changes
+    const unsubscribe = announcementService.subscribe(() => {
+      loadAnnouncements();
+    });
+
+    return unsubscribe;
+  }, []);
 
   const loadDashboardData = async (userData) => {
     try {
@@ -168,35 +221,107 @@ const StaffDashboard = () => {
     }
   };
 
-  // Handle logout
-  const handleLogout = async () => {
+  // Handle logout confirmation
+  const handleLogoutClick = () => {
+    console.log('🔴 Logout button clicked!');
+    setShowLogoutConfirm(true);
+  };
+
+  // Confirm logout
+  const confirmLogout = async () => {
+    console.log('🔴 Confirm logout called!');
+    setShowLogoutConfirm(false);
+    
     try {
-      showToast('Logging out...', 'info');
+      console.log('🔴 Starting logout process...');
+      showInfo('Logging out...');
       
-      // Clear local auth data first
-      authService.clearAuthData();
+      // Stop token auto-refresh
+      tokenManager.stopAutoRefresh();
+      console.log('🔴 Token auto-refresh stopped');
       
-      // Try to logout from backend
+      // Try to logout from backend first (while we still have tokens)
       try {
         await authService.logout();
+        console.log('🔴 Backend logout successful');
       } catch (logoutError) {
-        console.error('Backend logout error:', logoutError);
+        console.error('🔴 Backend logout error:', logoutError);
+        // Continue with logout even if backend call fails
       }
       
       // Try to sign out from Clerk
       try {
         await signOut();
+        console.log('🔴 Clerk signout successful');
       } catch (clerkError) {
-        console.error('Clerk signout error:', clerkError);
+        console.error('🔴 Clerk signout error:', clerkError);
+        // Continue with logout even if Clerk signout fails
       }
       
-      setTimeout(() => {
-        window.location.href = '/login';
-      }, 1500);
+      // Use auth context logout method (this handles backend logout and state clearing)
+      try {
+        console.log('🔴 Calling authLogout...');
+        await authLogout();
+        console.log('🔴 AuthLogout completed');
+      } catch (authError) {
+        console.error('🔴 Auth context logout error:', authError);
+        // Continue with manual cleanup
+      }
+      
+      // Force clear all auth data
+      authService.clearAuthData();
+      console.log('🔴 Auth data cleared');
+      
+      // Trigger storage event to notify other components
+      window.dispatchEvent(new Event('storage'));
+      console.log('🔴 Storage event dispatched');
+      
+      showSuccess('Logged out successfully! 👋');
+      
+      // Force redirect immediately
+      console.log('🔴 Redirecting to login...');
+      window.location.href = '/login';
+      
     } catch (error) {
-      console.error('Logout error:', error);
-      showToast('Logout failed', 'error');
+      console.error('🔴 Logout error:', error);
+      showWarning('Logout completed with some errors');
+      
+      // Force clear auth data and redirect even if there were errors
+      authService.clearAuthData();
+      tokenManager.stopAutoRefresh();
+      
+      // Force redirect
+      window.location.href = '/login';
     }
+  };
+
+  // Cancel logout
+  const cancelLogout = () => {
+    setShowLogoutConfirm(false);
+    showInfo('Logout cancelled');
+  };
+
+  // Simple logout for testing
+  const simpleLogout = () => {
+    console.log('🔴 Simple logout called!');
+    
+    // Clear all auth data
+    authService.clearAuthData();
+    tokenManager.stopAutoRefresh();
+    
+    // Clear any Clerk data
+    try {
+      signOut();
+    } catch (e) {
+      console.log('Clerk signout error:', e);
+    }
+    
+    showInfo('Logging out...');
+    
+    // Force redirect immediately
+    setTimeout(() => {
+      window.location.href = '/login';
+    }, 500);
   };
 
   // Handle attendance marking
@@ -207,9 +332,9 @@ const StaffDashboard = () => {
         ...prev,
         todayStatus: 'present'
       }));
-      showToast('Attendance marked successfully!', 'success');
+      showSuccess('Attendance marked successfully!');
     } catch (error) {
-      showToast('Failed to mark attendance', 'error');
+      showError('Failed to mark attendance');
     }
   };
 
@@ -279,7 +404,7 @@ const StaffDashboard = () => {
 
         <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200">
           <button
-            onClick={handleLogout}
+            onClick={handleLogoutClick}
             className="w-full flex items-center px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
           >
             <FiLogOut className="w-5 h-5 mr-3" />
@@ -316,6 +441,13 @@ const StaffDashboard = () => {
             </div>
 
             <div className="flex items-center space-x-4">
+              {/* Test logout button */}
+              <button
+                onClick={simpleLogout}
+                className="px-3 py-1 text-xs bg-red-100 text-red-600 rounded hover:bg-red-200"
+              >
+                Test Logout
+              </button>
               <div className="text-right">
                 <p className="text-sm font-medium text-gray-900">{user?.fullName}</p>
                 <p className="text-xs text-gray-500">{user?.employeeId}</p>
@@ -524,7 +656,7 @@ const StaffDashboard = () => {
 
                 <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
                   <div className="flex items-center justify-between mb-4">
-                    <h3 className="font-semibold text-gray-900">Notifications</h3>
+                    <h3 className="font-semibold text-gray-900">Announcements & Notifications</h3>
                     <button
                       onClick={() => setActiveSection('notifications')}
                       className="text-emerald-600 hover:text-emerald-700 text-sm font-medium"
@@ -533,7 +665,43 @@ const StaffDashboard = () => {
                     </button>
                   </div>
                   <div className="space-y-3">
-                    {notifications.slice(0, 4).map((notification) => (
+                    {/* Show announcements first */}
+                    {announcements.slice(0, 2).map((announcement) => (
+                      <div key={`announcement-${announcement.id}`} className="flex items-start space-x-3 p-3 rounded-lg border border-gray-200 bg-gradient-to-r from-blue-50 to-emerald-50">
+                        <div className={`w-3 h-3 rounded-full mt-1.5 ${
+                          announcement.priority === 'urgent' ? 'bg-red-500' :
+                          announcement.priority === 'high' ? 'bg-orange-500' :
+                          announcement.priority === 'normal' ? 'bg-blue-500' : 'bg-gray-500'
+                        }`} />
+                        <div className="flex-1">
+                          <div className="flex items-center space-x-2 mb-1">
+                            <p className="text-sm font-semibold text-gray-900">{announcement.title}</p>
+                            <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                              announcement.type === 'success' ? 'bg-green-100 text-green-700' :
+                              announcement.type === 'warning' ? 'bg-yellow-100 text-yellow-700' :
+                              announcement.type === 'error' ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'
+                            }`}>
+                              {announcement.type}
+                            </span>
+                          </div>
+                          <p className="text-xs text-gray-700 mb-1">{announcement.content.substring(0, 100)}...</p>
+                          <div className="flex items-center space-x-2 text-xs text-gray-500">
+                            <span>By {announcement.createdBy}</span>
+                            <span>•</span>
+                            <span>{new Date(announcement.createdAt).toLocaleDateString()}</span>
+                            {announcement.expiresAt && (
+                              <>
+                                <span>•</span>
+                                <span>Expires: {new Date(announcement.expiresAt).toLocaleDateString()}</span>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                    
+                    {/* Show regular notifications */}
+                    {notifications.slice(0, announcements.length > 0 ? 2 : 4).map((notification) => (
                       <div key={notification.id} className="flex items-start space-x-3 p-3 rounded-lg bg-gray-50">
                         <div className={`w-2 h-2 rounded-full mt-2 ${
                           notification.type === 'success' ? 'bg-green-500' :
@@ -545,6 +713,12 @@ const StaffDashboard = () => {
                         </div>
                       </div>
                     ))}
+                    
+                    {announcements.length === 0 && notifications.length === 0 && (
+                      <div className="text-center py-4">
+                        <p className="text-sm text-gray-500">No announcements or notifications</p>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -561,6 +735,39 @@ const StaffDashboard = () => {
           className="fixed inset-0 z-40 bg-black bg-opacity-50 lg:hidden"
           onClick={() => setSidebarOpen(false)}
         />
+      )}
+
+      {/* Logout Confirmation Modal */}
+      {showLogoutConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+          <div className="bg-white rounded-2xl p-6 max-w-md w-full mx-4 shadow-2xl">
+            <div className="text-center">
+              <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <FiLogOut className="w-8 h-8 text-red-600" />
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                Confirm Logout
+              </h3>
+              <p className="text-gray-600 mb-6">
+                Are you sure you want to logout? You'll need to sign in again to access your dashboard.
+              </p>
+              <div className="flex space-x-3">
+                <button
+                  onClick={cancelLogout}
+                  className="flex-1 px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg font-medium transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmLogout}
+                  className="flex-1 px-4 py-2 text-white bg-red-600 hover:bg-red-700 rounded-lg font-medium transition-colors"
+                >
+                  Yes, Logout
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
