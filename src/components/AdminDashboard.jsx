@@ -9,6 +9,7 @@ import AddSupplierForm from './AddSupplierForm';
 import SupplierList from './SupplierList';
 import tokenManager from '../utils/tokenManager';
 import announcementService from '../services/announcementService';
+import leaveService from '../services/leaveService';
 
 import { 
   FiHome, 
@@ -102,6 +103,19 @@ const AdminDashboard = () => {
     expiresAt: '',
     isActive: true
   });
+
+  // Leave management states
+  const [leaves, setLeaves] = useState([]);
+  const [leaveStats, setLeaveStats] = useState({
+    pending: 0,
+    approved: 0,
+    rejected: 0,
+    total: 0
+  });
+  const [selectedLeave, setSelectedLeave] = useState(null);
+  const [showLeaveDetails, setShowLeaveDetails] = useState(false);
+  const [leaveFilter, setLeaveFilter] = useState('all'); // all, pending, approved, rejected
+  const [leaveLoading, setLeaveLoading] = useState(false);
 
   // Handle responsive sidebar behavior and token management
   useEffect(() => {
@@ -347,6 +361,58 @@ const AdminDashboard = () => {
       error('Failed to update announcement status');
     }
   };
+
+  // Leave management functions
+  const loadLeaves = async () => {
+    setLeaveLoading(true);
+    try {
+      const params = {};
+      if (leaveFilter !== 'all') {
+        params.status = leaveFilter;
+      }
+      
+      const response = await leaveService.getAllLeaves(params);
+      if (response.success) {
+        setLeaves(response.data.leaves);
+        setLeaveStats(response.data.summary);
+      }
+    } catch (error) {
+      console.error('Error loading leaves:', error);
+      error('Failed to load leave applications');
+    } finally {
+      setLeaveLoading(false);
+    }
+  };
+
+  const handleReviewLeave = async (leaveId, status, comments = '') => {
+    try {
+      const response = await leaveService.reviewLeave(leaveId, {
+        status,
+        reviewComments: comments
+      });
+      
+      if (response.success) {
+        success(`Leave application ${status} successfully`);
+        loadLeaves(); // Reload the list
+        setShowLeaveDetails(false);
+      }
+    } catch (error) {
+      console.error('Error reviewing leave:', error);
+      error(error.message || 'Failed to review leave application');
+    }
+  };
+
+  const handleViewLeaveDetails = (leave) => {
+    setSelectedLeave(leave);
+    setShowLeaveDetails(true);
+  };
+
+  // Load leaves when component mounts or filter changes
+  useEffect(() => {
+    if (activeSection === 'leave-management') {
+      loadLeaves();
+    }
+  }, [activeSection, leaveFilter]);
   
   const [stats, setStats] = useState({
     totalRevenue: 847250,
@@ -452,6 +518,7 @@ const AdminDashboard = () => {
     { id: 'inventory', label: 'Inventory', icon: FiPackage, badge: '23' },
     { id: 'sales', label: 'Sales', icon: FiShoppingCart, badge: null },
     { id: 'staff', label: 'Staff', icon: FiUsers, badge: null },
+    { id: 'leave-management', label: 'Leave Management', icon: FiCalendar, badge: null },
     { id: 'announcements', label: 'Announcements', icon: FiMessageSquare, badge: announcements.filter(a => a.isActive).length.toString() },
     { id: 'suppliers', label: 'Suppliers', icon: FiTruck, badge: null },
     { id: 'reports', label: 'Reports', icon: FiBarChart2, badge: null },
@@ -1966,8 +2033,160 @@ const AdminDashboard = () => {
             </div>
           )}
 
+          {/* Leave Management Section */}
+          {activeSection === 'leave-management' && (
+            <div className="space-y-6 lg:space-y-8">
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                <div>
+                  <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">Leave Management</h1>
+                  <p className="text-gray-600 mt-1 text-sm lg:text-base">Review and manage staff leave applications</p>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <select
+                    value={leaveFilter}
+                    onChange={(e) => setLeaveFilter(e.target.value)}
+                    className="border border-gray-300 text-gray-700 px-3 lg:px-4 py-2 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm lg:text-base"
+                  >
+                    <option value="all">All Applications</option>
+                    <option value="pending">Pending</option>
+                    <option value="approved">Approved</option>
+                    <option value="rejected">Rejected</option>
+                  </select>
+                  <button 
+                    onClick={loadLeaves}
+                    className="border border-gray-300 text-gray-700 px-3 lg:px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors text-sm lg:text-base"
+                  >
+                    <FiRefreshCw className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Stats Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="font-semibold text-gray-900">Total Applications</h3>
+                    <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                      <FiCalendar className="w-5 h-5 text-blue-600" />
+                    </div>
+                  </div>
+                  <div className="text-3xl font-bold text-blue-600 mb-2">{leaveStats.total}</div>
+                  <p className="text-sm text-gray-600">All time</p>
+                </div>
+
+                <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="font-semibold text-gray-900">Pending Review</h3>
+                    <div className="w-10 h-10 bg-yellow-100 rounded-lg flex items-center justify-center">
+                      <FiClock className="w-5 h-5 text-yellow-600" />
+                    </div>
+                  </div>
+                  <div className="text-3xl font-bold text-yellow-600 mb-2">{leaveStats.pending}</div>
+                  <p className="text-sm text-gray-600">Awaiting action</p>
+                </div>
+
+                <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="font-semibold text-gray-900">Approved</h3>
+                    <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                      <FiCheck className="w-5 h-5 text-green-600" />
+                    </div>
+                  </div>
+                  <div className="text-3xl font-bold text-green-600 mb-2">{leaveStats.approved}</div>
+                  <p className="text-sm text-gray-600">Approved leaves</p>
+                </div>
+
+                <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="font-semibold text-gray-900">Rejected</h3>
+                    <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
+                      <FiX className="w-5 h-5 text-red-600" />
+                    </div>
+                  </div>
+                  <div className="text-3xl font-bold text-red-600 mb-2">{leaveStats.rejected}</div>
+                  <p className="text-sm text-gray-600">Rejected leaves</p>
+                </div>
+              </div>
+
+              {/* Leave Applications List */}
+              <div className="bg-white rounded-xl border border-gray-200">
+                <div className="p-6 border-b border-gray-200">
+                  <h3 className="text-lg font-semibold text-gray-900">Leave Applications</h3>
+                </div>
+                
+                <div className="p-6">
+                  {leaveLoading ? (
+                    <div className="flex items-center justify-center py-12">
+                      <FiRefreshCw className="w-6 h-6 text-gray-400 animate-spin" />
+                      <span className="ml-2 text-gray-600">Loading applications...</span>
+                    </div>
+                  ) : leaves.length === 0 ? (
+                    <div className="text-center py-12">
+                      <FiCalendar className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                      <p className="text-gray-500">No leave applications found</p>
+                      <p className="text-sm text-gray-400 mt-1">
+                        {leaveFilter !== 'all' ? `No ${leaveFilter} applications` : 'Applications will appear here when staff apply for leave'}
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {leaves.map((leave) => (
+                        <div
+                          key={leave._id}
+                          className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors"
+                          onClick={() => handleViewLeaveDetails(leave)}
+                        >
+                          <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-center space-x-3">
+                              <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
+                                <span className="text-sm font-medium text-gray-600">
+                                  {leave.employeeDetails.fullName.charAt(0)}
+                                </span>
+                              </div>
+                              <div>
+                                <h4 className="font-medium text-gray-900">{leave.employeeDetails.fullName}</h4>
+                                <p className="text-sm text-gray-600">{leave.employeeDetails.employeeId}</p>
+                              </div>
+                            </div>
+                            <span className={`px-3 py-1 rounded-full text-xs font-medium ${leaveService.getStatusColor(leave.status)}`}>
+                              {leave.status.charAt(0).toUpperCase() + leave.status.slice(1)}
+                            </span>
+                          </div>
+                          
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                            <div>
+                              <span className="text-gray-500">Leave Type:</span>
+                              <span className="ml-2 font-medium text-gray-900">{leaveService.getLeaveTypeLabel(leave.type)}</span>
+                            </div>
+                            <div>
+                              <span className="text-gray-500">Duration:</span>
+                              <span className="ml-2 font-medium text-gray-900">
+                                {leaveService.formatDateRange(leave.startDate, leave.endDate)}
+                              </span>
+                            </div>
+                            <div>
+                              <span className="text-gray-500">Applied:</span>
+                              <span className="ml-2 font-medium text-gray-900">
+                                {new Date(leave.appliedOn || leave.createdAt).toLocaleDateString()}
+                              </span>
+                            </div>
+                          </div>
+                          
+                          <div className="mt-3">
+                            <span className="text-gray-500 text-sm">Reason:</span>
+                            <p className="text-sm text-gray-900 mt-1 line-clamp-2">{leave.reason}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Fallback for any other sections */}
-          {!['dashboard', 'inventory', 'sales', 'staff', 'announcements', 'suppliers', 'reports', 'notifications', 'settings'].includes(activeSection) && (
+          {!['dashboard', 'inventory', 'sales', 'staff', 'leave-management', 'announcements', 'suppliers', 'reports', 'notifications', 'settings'].includes(activeSection) && (
             <div className="flex items-center justify-center h-full">
               <div className="text-center">
                 <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
@@ -2147,6 +2366,174 @@ const AdminDashboard = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Leave Details Modal for Admin Review */}
+      {showLeaveDetails && selectedLeave && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
+          <div className="bg-white rounded-2xl max-w-lg w-full shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-xl font-semibold text-gray-900">Leave Application Review</h3>
+                <button
+                  onClick={() => setShowLeaveDetails(false)}
+                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                  <FiX className="w-5 h-5 text-gray-500" />
+                </button>
+              </div>
+
+              <div className="space-y-6">
+                {/* Employee Info */}
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <div className="flex items-center space-x-3 mb-3">
+                    <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center">
+                      <span className="text-lg font-medium text-gray-600">
+                        {selectedLeave.employeeDetails.fullName.charAt(0)}
+                      </span>
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-gray-900">{selectedLeave.employeeDetails.fullName}</h4>
+                      <p className="text-sm text-gray-600">{selectedLeave.employeeDetails.employeeId}</p>
+                      <p className="text-sm text-gray-600">{selectedLeave.employeeDetails.email}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Leave Details */}
+                <div className="space-y-4">
+                  <div className="flex items-center justify-center">
+                    <span className={`px-4 py-2 rounded-full text-sm font-medium ${leaveService.getStatusColor(selectedLeave.status)}`}>
+                      {selectedLeave.status.charAt(0).toUpperCase() + selectedLeave.status.slice(1)}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <span className="text-gray-600 text-sm">Leave Type</span>
+                      <p className="font-medium text-gray-900">{leaveService.getLeaveTypeLabel(selectedLeave.type)}</p>
+                    </div>
+                    <div>
+                      <span className="text-gray-600 text-sm">Duration</span>
+                      <p className="font-medium text-gray-900">
+                        {selectedLeave.totalDays} {selectedLeave.totalDays === 1 ? 'day' : 'days'}
+                        {selectedLeave.isHalfDay && ' (Half Day)'}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <span className="text-gray-600 text-sm">Start Date</span>
+                      <p className="font-medium text-gray-900">
+                        {new Date(selectedLeave.startDate).toLocaleDateString('en-US', { 
+                          weekday: 'short', 
+                          year: 'numeric', 
+                          month: 'short', 
+                          day: 'numeric' 
+                        })}
+                      </p>
+                    </div>
+                    <div>
+                      <span className="text-gray-600 text-sm">End Date</span>
+                      <p className="font-medium text-gray-900">
+                        {new Date(selectedLeave.endDate).toLocaleDateString('en-US', { 
+                          weekday: 'short', 
+                          year: 'numeric', 
+                          month: 'short', 
+                          day: 'numeric' 
+                        })}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div>
+                    <span className="text-gray-600 text-sm block mb-2">Reason</span>
+                    <p className="text-gray-900 bg-gray-50 p-3 rounded-lg text-sm">
+                      {selectedLeave.reason}
+                    </p>
+                  </div>
+
+                  <div className="flex justify-between pt-2 border-t border-gray-200">
+                    <span className="text-gray-600 text-sm">Applied on</span>
+                    <span className="font-medium text-gray-900">
+                      {new Date(selectedLeave.appliedOn || selectedLeave.createdAt).toLocaleDateString('en-US', { 
+                        weekday: 'short', 
+                        year: 'numeric', 
+                        month: 'short', 
+                        day: 'numeric' 
+                      })}
+                    </span>
+                  </div>
+
+                  {/* Review Info */}
+                  {selectedLeave.reviewedBy && (
+                    <div className="bg-blue-50 rounded-lg p-4">
+                      <h5 className="font-medium text-blue-900 mb-2">Review Information</h5>
+                      <div className="space-y-2 text-sm">
+                        <div className="flex justify-between">
+                          <span className="text-blue-700">Reviewed by:</span>
+                          <span className="font-medium text-blue-900">
+                            {selectedLeave.reviewedBy.fullName || 'Admin'}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-blue-700">Reviewed on:</span>
+                          <span className="font-medium text-blue-900">
+                            {new Date(selectedLeave.reviewedOn).toLocaleDateString()}
+                          </span>
+                        </div>
+                        {selectedLeave.reviewComments && (
+                          <div>
+                            <span className="text-blue-700 block mb-1">Comments:</span>
+                            <p className="text-blue-900 bg-blue-100 p-2 rounded text-sm">
+                              {selectedLeave.reviewComments}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Action Buttons */}
+                {selectedLeave.status === 'pending' && (
+                  <div className="flex space-x-3 pt-4 border-t border-gray-200">
+                    <button
+                      onClick={() => {
+                        const comments = prompt('Add review comments (optional):');
+                        handleReviewLeave(selectedLeave._id, 'rejected', comments || '');
+                      }}
+                      className="flex-1 px-4 py-2 text-red-600 bg-red-50 hover:bg-red-100 rounded-lg font-medium transition-colors"
+                    >
+                      Reject
+                    </button>
+                    <button
+                      onClick={() => {
+                        const comments = prompt('Add review comments (optional):');
+                        handleReviewLeave(selectedLeave._id, 'approved', comments || '');
+                      }}
+                      className="flex-1 px-4 py-2 text-white bg-green-600 hover:bg-green-700 rounded-lg font-medium transition-colors"
+                    >
+                      Approve
+                    </button>
+                  </div>
+                )}
+
+                {selectedLeave.status !== 'pending' && (
+                  <div className="flex justify-center pt-4 border-t border-gray-200">
+                    <button
+                      onClick={() => setShowLeaveDetails(false)}
+                      className="px-6 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg font-medium transition-colors"
+                    >
+                      Close
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       )}
