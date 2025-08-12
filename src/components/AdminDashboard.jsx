@@ -10,6 +10,7 @@ import SupplierList from './SupplierList';
 import tokenManager from '../utils/tokenManager';
 import announcementService from '../services/announcementService';
 import leaveService from '../services/leaveService';
+import InventoryManager from './InventoryManager';
 
 import { 
   FiHome, 
@@ -1227,6 +1228,7 @@ const AdminDashboard = () => {
           {/* Inventory Section */}
           {activeSection === 'inventory' && (
             <div className="space-y-6 lg:space-y-8 pr-[10rem] pl-[10rem]">
+              {/* Lightweight Inventory Manager (add one, import CSV, list) */}
               <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                 <div>
                   <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">Inventory Management</h1>
@@ -1298,97 +1300,12 @@ const AdminDashboard = () => {
                   <p className="text-sm text-blue-600 font-medium">+5.2% from last month</p>
                 </div>
               </div>
+              <InventoryManager />
+
+              
 
               {/* Inventory Table */}
-              <div className="bg-white rounded-xl border border-gray-200">
-                <div className="p-4 lg:p-6 border-b border-gray-100">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                    <h3 className="text-base lg:text-lg font-semibold text-gray-900">Recent Products</h3>
-                    <div className="flex items-center space-x-2">
-                      <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-                        <FiFilter className="w-4 h-4 text-gray-500" />
-                      </button>
-                      <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors hidden sm:block">
-                        <FiDownload className="w-4 h-4 text-gray-500" />
-                      </button>
-                    </div>
-                  </div>
-                </div>
-                <div className="p-4 lg:p-6">
-                  <div className="overflow-x-auto">
-                    <table className="w-full">
-                      <thead>
-                        <tr className="border-b border-gray-100">
-                          <th className="text-left py-3 px-4 font-medium text-gray-600">Product</th>
-                          <th className="text-left py-3 px-4 font-medium text-gray-600">Category</th>
-                          <th className="text-left py-3 px-4 font-medium text-gray-600">Stock</th>
-                          <th className="text-left py-3 px-4 font-medium text-gray-600">Price</th>
-                          <th className="text-left py-3 px-4 font-medium text-gray-600">Status</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        <tr className="border-b border-gray-50">
-                          <td className="py-3 px-4">
-                            <div className="flex items-center space-x-3">
-                              <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-                                <span className="text-green-600 font-medium">🥬</span>
-                              </div>
-                              <div>
-                                <p className="font-medium text-gray-900">Organic Lettuce</p>
-                                <p className="text-sm text-gray-500">Fresh vegetables</p>
-                              </div>
-                            </div>
-                          </td>
-                          <td className="py-3 px-4 text-gray-600">Vegetables</td>
-                          <td className="py-3 px-4 text-gray-600">45 units</td>
-                          <td className="py-3 px-4 text-gray-600">$2.99</td>
-                          <td className="py-3 px-4">
-                            <span className="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">In Stock</span>
-                          </td>
-                        </tr>
-                        <tr className="border-b border-gray-50">
-                          <td className="py-3 px-4">
-                            <div className="flex items-center space-x-3">
-                              <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
-                                <span className="text-red-600 font-medium">🍎</span>
-                              </div>
-                              <div>
-                                <p className="font-medium text-gray-900">Organic Apples</p>
-                                <p className="text-sm text-gray-500">Fresh fruits</p>
-                              </div>
-                            </div>
-                          </td>
-                          <td className="py-3 px-4 text-gray-600">Fruits</td>
-                          <td className="py-3 px-4 text-gray-600">5 units</td>
-                          <td className="py-3 px-4 text-gray-600">$4.99</td>
-                          <td className="py-3 px-4">
-                            <span className="px-2 py-1 bg-amber-100 text-amber-700 rounded-full text-xs font-medium">Low Stock</span>
-                          </td>
-                        </tr>
-                        <tr className="border-b border-gray-50">
-                          <td className="py-3 px-4">
-                            <div className="flex items-center space-x-3">
-                              <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                                <span className="text-blue-600 font-medium">🥛</span>
-                              </div>
-                              <div>
-                                <p className="font-medium text-gray-900">Organic Milk</p>
-                                <p className="text-sm text-gray-500">Dairy products</p>
-                              </div>
-                            </div>
-                          </td>
-                          <td className="py-3 px-4 text-gray-600">Dairy</td>
-                          <td className="py-3 px-4 text-gray-600">0 units</td>
-                          <td className="py-3 px-4 text-gray-600">$3.49</td>
-                          <td className="py-3 px-4">
-                            <span className="px-2 py-1 bg-red-100 text-red-700 rounded-full text-xs font-medium">Out of Stock</span>
-                          </td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </div>
+              
             </div>
           )}
 
