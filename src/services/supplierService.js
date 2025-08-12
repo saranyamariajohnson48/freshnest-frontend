@@ -113,8 +113,8 @@ class SupplierService {
           address: supplierData.address,
           // Generate a username from email
           username: supplierData.email.split('@')[0] + '_supplier',
-          // Generate a temporary password (should be changed by supplier)
-          password: 'TempPass123!',
+          // Password (from form). Fallback to a temporary if not provided.
+          password: supplierData.password || 'TempPass123!',
           // Supplier-specific data in a custom field
           supplierDetails: {
             contactPerson: supplierData.contactPerson,
@@ -322,7 +322,7 @@ class SupplierService {
     // Local storage fallback
     try {
       const suppliers = this.getLocalSuppliers();
-      const supplierIndex = suppliers.findIndex(s => s.id === parseInt(id));
+      const supplierIndex = suppliers.findIndex(s => String(s.id ?? s._id) === String(id));
       
       if (supplierIndex === -1) {
         throw new Error('Supplier not found');
@@ -384,7 +384,7 @@ class SupplierService {
     // Local storage fallback
     try {
       const suppliers = this.getLocalSuppliers();
-      const supplierIndex = suppliers.findIndex(s => s.id === parseInt(id));
+      const supplierIndex = suppliers.findIndex(s => String(s.id ?? s._id) === String(id));
       
       if (supplierIndex === -1) {
         throw new Error('Supplier not found');
@@ -433,7 +433,7 @@ class SupplierService {
     // Local storage fallback
     try {
       const suppliers = this.getLocalSuppliers();
-      const supplierIndex = suppliers.findIndex(s => s.id === parseInt(id));
+      const supplierIndex = suppliers.findIndex(s => String(s.id ?? s._id) === String(id));
       
       if (supplierIndex === -1) {
         throw new Error('Supplier not found');
@@ -702,7 +702,7 @@ class SupplierService {
   // Utility method to transform backend user data to supplier format
   transformUserToSupplier(userData) {
     return {
-      id: userData.id,
+      id: userData._id || userData.id,
       name: userData.fullName || userData.name, // Handle both field names
       email: userData.email,
       phone: userData.phone,

@@ -145,7 +145,7 @@ const SupplierList = ({ onAddSupplier, refreshTrigger }) => {
   const handleDelete = async (supplier) => {
     if (window.confirm(`Are you sure you want to delete ${supplier.name}?`)) {
       try {
-        await supplierService.deleteSupplier(supplier.id);
+        await supplierService.deleteSupplier(supplier.id || supplier._id);
         success('Supplier deleted successfully');
         loadSuppliers(); // Reload the list
       } catch (err) {
@@ -158,7 +158,7 @@ const SupplierList = ({ onAddSupplier, refreshTrigger }) => {
 
   const handleToggleStatus = async (supplier) => {
     try {
-      const result = await supplierService.toggleSupplierStatus(supplier.id);
+      const result = await supplierService.toggleSupplierStatus(supplier.id || supplier._id);
       success(`Supplier ${result.status === 'active' ? 'activated' : 'deactivated'} successfully`);
       loadSuppliers(); // Reload the list
     } catch (err) {
@@ -334,7 +334,7 @@ const SupplierList = ({ onAddSupplier, refreshTrigger }) => {
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
           {filteredSuppliers.map((supplier) => (
-            <div key={supplier.id} className="bg-white rounded-2xl border border-gray-200 p-6 hover:shadow-lg transition-shadow">
+            <div key={supplier.id || supplier._id} className="bg-white rounded-2xl border border-gray-200 p-6 hover:shadow-lg transition-shadow">
               {/* Header */}
               <div className="flex items-start justify-between mb-4">
                 <div className="flex-1">

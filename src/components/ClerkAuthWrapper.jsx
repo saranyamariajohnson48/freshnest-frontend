@@ -20,7 +20,7 @@ const ClerkAuthWrapper = ({ children }) => {
       }
 
       // Skip processing if we're already on a protected route or certain pages
-      const skipRoutes = ['/admin/dashboard', '/retailer/dashboard', '/user/dashboard', '/sign-out'];
+      const skipRoutes = ['/admin/dashboard', '/retailer/dashboard', '/user/dashboard', '/supplier/dashboard', '/sign-out'];
       if (skipRoutes.some(route => location.pathname.startsWith(route))) {
         console.log('Skipping auth processing - already on protected route:', location.pathname);
         return;
@@ -96,6 +96,9 @@ const ClerkAuthWrapper = ({ children }) => {
           } else if (data.user.role === 'staff' || data.user.role === 'Staff') {
             console.log('Redirecting to staff dashboard');
             navigate('/staff/dashboard', { replace: true });
+          } else if (data.user.role === 'supplier' || data.user.role === 'Supplier') {
+            console.log('Redirecting to supplier dashboard');
+            navigate('/supplier/dashboard', { replace: true });
           } else if (data.user.role === 'user' || data.user.role === 'User') {
             console.log('Redirecting to user dashboard');
             navigate('/user/dashboard', { replace: true });

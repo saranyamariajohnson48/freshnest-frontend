@@ -105,6 +105,14 @@ const Login = () => {
               window.location.href = "/staff/dashboard";
             }
           }, 500);
+        } else if (data.user && (data.user.role === 'supplier' || data.user.role === 'Supplier')) {
+          console.log("Redirecting to supplier dashboard...");
+          navigate("/supplier/dashboard");
+          setTimeout(() => {
+            if (window.location.pathname !== "/supplier/dashboard") {
+              window.location.href = "/supplier/dashboard";
+            }
+          }, 500);
         } else if (data.user && (data.user.role === 'user' || data.user.role === 'User')) {
           console.log("Redirecting to user dashboard...");
           navigate("/user/dashboard");

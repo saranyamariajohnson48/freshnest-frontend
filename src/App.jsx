@@ -34,6 +34,7 @@ import ValidationTest from './components/ValidationTest';
 import TestStaffAPI from './components/TestStaffAPI';
 import TokenDebug from './components/TokenDebug';
 import StaffDashboard from './components/StaffDashboard';
+import SupplierDashboard from './components/SupplierDashboard';
 
 function Home() {
   return (
@@ -103,6 +104,12 @@ export default function App() {
           <Route path="/staff/dashboard" element={
             <ProtectedRoute requiredRoles={['staff', 'Staff']}>
               <StaffDashboard />
+            </ProtectedRoute>
+          } />
+
+          <Route path="/supplier/dashboard" element={
+            <ProtectedRoute requiredRoles={['supplier', 'Supplier']}>
+              <SupplierDashboard />
             </ProtectedRoute>
           } />
 

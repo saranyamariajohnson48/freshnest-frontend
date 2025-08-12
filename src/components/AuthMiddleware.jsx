@@ -25,6 +25,8 @@ export default function AuthMiddleware({ children, requiredRole }) {
         return <Navigate to="/retailer/dashboard" replace />;
       case 'staff':
         return <Navigate to="/staff/dashboard" replace />;
+      case 'supplier':
+        return <Navigate to="/supplier/dashboard" replace />;
       case 'user':
         return <Navigate to="/user/dashboard" replace />;
       default:

@@ -117,6 +117,16 @@ const AddSupplierForm = ({ isOpen, onClose, onSupplierCreated, editingSupplier =
       newErrors.address = 'Address is required';
     }
 
+    // Password validation for new supplier
+    if (!editingSupplier) {
+      if (!formData.password || formData.password.length < 6) {
+        newErrors.password = 'Password must be at least 6 characters';
+      }
+      if (!formData.confirmPassword || formData.password !== formData.confirmPassword) {
+        newErrors.confirmPassword = 'Passwords do not match';
+      }
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -133,7 +143,7 @@ const AddSupplierForm = ({ isOpen, onClose, onSupplierCreated, editingSupplier =
     try {
       let result;
       if (editingSupplier) {
-        result = await supplierService.updateSupplier(editingSupplier.id, formData);
+        result = await supplierService.updateSupplier(editingSupplier.id || editingSupplier._id, formData);
         success('Supplier updated successfully!');
       } else {
         result = await supplierService.createSupplier(formData);
@@ -232,6 +242,46 @@ const AddSupplierForm = ({ isOpen, onClose, onSupplierCreated, editingSupplier =
                 />
                 {errors.contactPerson && (
                   <p className="text-red-500 text-sm mt-1">{errors.contactPerson}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Password *
+                </label>
+                <input
+                  type="password"
+                  name="password"
+                  value={formData.password || ''}
+                  onChange={handleInputChange}
+                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors ${
+                    errors.password ? 'border-red-500' : 'border-gray-300'
+                  }`}
+                  placeholder="Set a password for supplier login"
+                  disabled={loading}
+                />
+                {errors.password && (
+                  <p className="text-red-500 text-sm mt-1">{errors.password}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Confirm Password *
+                </label>
+                <input
+                  type="password"
+                  name="confirmPassword"
+                  value={formData.confirmPassword || ''}
+                  onChange={handleInputChange}
+                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors ${
+                    errors.confirmPassword ? 'border-red-500' : 'border-gray-300'
+                  }`}
+                  placeholder="Confirm the password"
+                  disabled={loading}
+                />
+                {errors.confirmPassword && (
+                  <p className="text-red-500 text-sm mt-1">{errors.confirmPassword}</p>
                 )}
               </div>
             </div>
