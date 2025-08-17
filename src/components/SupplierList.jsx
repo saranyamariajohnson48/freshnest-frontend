@@ -29,30 +29,27 @@ const SupplierList = ({ onAddSupplier, refreshTrigger }) => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
-  const [selectedStatus, setSelectedStatus] = useState('all');
+  // Default to showing only active suppliers
+  const [selectedStatus, setSelectedStatus] = useState('active');
   const [showEditForm, setShowEditForm] = useState(false);
   const [editingSupplier, setEditingSupplier] = useState(null);
   const [showDropdown, setShowDropdown] = useState(null);
 
-  // Categories for filter
+  // Categories for filter (restricted)
   const categories = [
     'all',
-    'Vegetables',
-    'Fruits',
-    'Dairy',
-    'Bakery',
-    'Meat & Poultry',
-    'Seafood',
-    'Grains & Cereals',
-    'Beverages',
-    'Spices & Herbs',
-    'Other'
+    'Biscuits Pack',
+    'Noodles Pack',
+    'Chips Pack',
+    'Chocolate Pack',
+    'Juice Pack'
   ];
 
   const loadSuppliers = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await supplierService.getAllSuppliers();
+      // Pass status filter to backend when loading initially
+      const response = await supplierService.getAllSuppliers({ status: selectedStatus !== 'all' ? selectedStatus : undefined });
       
       // Transform backend user data to supplier format
       const supplierData = response.users ? response.users.map(user => 
@@ -66,7 +63,7 @@ const SupplierList = ({ onAddSupplier, refreshTrigger }) => {
     } finally {
       setLoading(false);
     }
-  }, [error]);
+  }, [error, selectedStatus]);
 
   const filterSuppliers = useCallback(async () => {
     try {
@@ -145,9 +142,12 @@ const SupplierList = ({ onAddSupplier, refreshTrigger }) => {
   const handleDelete = async (supplier) => {
     if (window.confirm(`Are you sure you want to delete ${supplier.name}?`)) {
       try {
-        await supplierService.deleteSupplier(supplier.id || supplier._id);
+        const removedId = supplier.id || supplier._id;
+        await supplierService.deleteSupplier(removedId);
         success('Supplier deleted successfully');
-        loadSuppliers(); // Reload the list
+        // Optimistically remove from UI without full reload
+        setSuppliers(prev => prev.filter(s => (s.id || s._id) !== removedId));
+        setFilteredSuppliers(prev => prev.filter(s => (s.id || s._id) !== removedId));
       } catch (err) {
         console.error('Error deleting supplier:', err);
         error('Failed to delete supplier');
@@ -194,18 +194,13 @@ const SupplierList = ({ onAddSupplier, refreshTrigger }) => {
 
   const getCategoryColor = (category) => {
     const colors = {
-      'Vegetables': 'bg-green-100 text-green-800',
-      'Fruits': 'bg-orange-100 text-orange-800',
-      'Dairy': 'bg-blue-100 text-blue-800',
-      'Bakery': 'bg-yellow-100 text-yellow-800',
-      'Meat & Poultry': 'bg-red-100 text-red-800',
-      'Seafood': 'bg-cyan-100 text-cyan-800',
-      'Grains & Cereals': 'bg-amber-100 text-amber-800',
-      'Beverages': 'bg-purple-100 text-purple-800',
-      'Spices & Herbs': 'bg-lime-100 text-lime-800',
-      'Other': 'bg-gray-100 text-gray-800'
+      'Biscuits Pack': 'bg-amber-100 text-amber-800',
+      'Noodles Pack': 'bg-blue-100 text-blue-800',
+      'Chips Pack': 'bg-yellow-100 text-yellow-800',
+      'Chocolate Pack': 'bg-purple-100 text-purple-800',
+      'Juice Pack': 'bg-green-100 text-green-800'
     };
-    return colors[category] || colors['Other'];
+    return colors[category] || 'bg-gray-100 text-gray-800';
   };
 
   const formatCurrency = (amount) => {

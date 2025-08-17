@@ -12,6 +12,9 @@ import announcementService from '../services/announcementService';
 import leaveService from '../services/leaveService';
 import InventoryManager from './InventoryManager';
 
+// Lazy components
+const AdminOrdersLazy = React.lazy(() => import('./AdminOrders'));
+
 import { 
   FiHome, 
   FiPackage, 
@@ -517,7 +520,7 @@ const AdminDashboard = () => {
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: FiHome, badge: null },
     { id: 'inventory', label: 'Inventory', icon: FiPackage, badge: '23' },
-    { id: 'sales', label: 'Sales', icon: FiShoppingCart, badge: null },
+    { id: 'orders', label: 'Orders', icon: FiShoppingCart, badge: null },
     { id: 'staff', label: 'Staff', icon: FiUsers, badge: null },
     { id: 'leave-management', label: 'Leave Management', icon: FiCalendar, badge: null },
     { id: 'announcements', label: 'Announcements', icon: FiMessageSquare, badge: announcements.filter(a => a.isActive).length.toString() },
@@ -1782,6 +1785,15 @@ const AdminDashboard = () => {
                   </div>
                 </div>
               </div>
+            </div>
+          )}
+
+          {/* Orders Section */}
+          {activeSection === 'orders' && (
+            <div className="space-y-6 lg:space-y-8 pr-[10rem] pl-[10rem]">
+              <React.Suspense fallback={<div className="p-6">Loading orders...</div>}>
+                <AdminOrdersLazy />
+              </React.Suspense>
             </div>
           )}
 

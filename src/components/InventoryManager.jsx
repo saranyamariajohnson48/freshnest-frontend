@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { FiUpload, FiPlus, FiCheckCircle, FiAlertCircle, FiFilter, FiDownload } from 'react-icons/fi';
 import productService from '../services/productService';
+import supplierService from '../services/supplierService';
 import { CATEGORY_OPTIONS, getBrandsForCategory } from '../utils/catalog';
 
 // Inline selector for categories used within InventoryManager
@@ -42,6 +43,7 @@ function InventoryManager() {
   const [loading, setLoading] = useState(false);
   const [file, setFile] = useState(null);
   const [editing, setEditing] = useState(null); // product being edited
+  const [suppliers, setSuppliers] = useState([]); // suppliers matching category
   const [form, setForm] = useState({
     name: '',
     sku: '',
@@ -54,7 +56,9 @@ function InventoryManager() {
     brand: '', // must be one of catalog brands for chosen category
     description: '',
     tags: '',
+    supplierId: '',
   });
+  const [errors, setErrors] = useState({});
   // Prefill form when editing a product
   const startEdit = (p) => {
     setEditing(p);
@@ -70,6 +74,7 @@ function InventoryManager() {
       brand: p.brand || '',
       description: p.description || '',
       tags: Array.isArray(p.tags) ? p.tags.join(', ') : (p.tags || ''),
+      supplierId: p.supplierId || '',
     });
   };
 
@@ -88,8 +93,30 @@ function InventoryManager() {
 
   useEffect(() => { load(); }, []);
 
+  const validate = () => {
+    const v = {};
+    if (!form.name.trim()) v.name = 'Product name is required';
+    if (!form.sku.trim()) v.sku = 'SKU is required';
+    if (!form.category) v.category = 'Please choose a category';
+    if (form.price === '' || isNaN(Number(form.price)) || Number(form.price) <= 0) v.price = 'Enter a valid price > 0';
+    if (form.costPrice !== '' && (isNaN(Number(form.costPrice)) || Number(form.costPrice) < 0)) v.costPrice = 'Cost price cannot be negative';
+    if (form.stock !== '' && (isNaN(Number(form.stock)) || Number(form.stock) < 0 || !Number.isInteger(Number(form.stock)))) v.stock = 'Stock must be a non-negative integer';
+    if (!form.unit) v.unit = 'Unit is required';
+    if (!form.brand) v.brand = 'Brand is required';
+    if (!form.supplierId) v.supplierId = 'Supplier is required';
+
+    // Brand must be in catalog for the selected category
+    const allowed = getBrandsForCategory(form.category);
+    if (form.category && allowed.length && form.brand && !allowed.includes(form.brand)) {
+      v.brand = 'Please select a valid brand for the chosen category';
+    }
+    setErrors(v);
+    return Object.keys(v).length === 0;
+  };
+
   const handleCreate = async (e) => {
     e.preventDefault();
+    if (!validate()) return;
     try {
       const payload = {
         ...form,
@@ -98,6 +125,14 @@ function InventoryManager() {
         stock: form.stock ? Number(form.stock) : 0,
         tags: form.tags ? form.tags.split(',').map(s => s.trim()) : [],
       };
+      // Enforce supplier-category match if supplier selected
+      if (payload.supplierId) {
+        const selectedSupplier = suppliers.find(s => String(s.id || s._id) === String(payload.supplierId));
+        if (!selectedSupplier) return error('Selected supplier not found');
+        if (selectedSupplier.category !== payload.category) {
+          return error('Supplier category must match product category');
+        }
+      }
       // Basic guard: ensure brand fits category
       const allowed = getBrandsForCategory(payload.category);
       if (allowed.length && !allowed.includes(payload.brand)) {
@@ -108,6 +143,9 @@ function InventoryManager() {
         success('Product updated successfully');
         setEditing(null);
       } else {
+        if (!payload.supplierId) {
+          return error('Please select a supplier');
+        }
         await productService.createProduct(payload);
         success('Product added successfully');
       }
@@ -160,33 +198,102 @@ function InventoryManager() {
       <div className="bg-white rounded-xl border border-gray-200 p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Add Product</h3>
         <form onSubmit={handleCreate} className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <input className="border rounded p-2" required placeholder="Name" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} />
-          <input className="border rounded p-2" required placeholder="SKU" value={form.sku} onChange={e => setForm({ ...form, sku: e.target.value })} />
-          {/* Category first: choose from curated catalog */}
-          <select className="border rounded p-2" required value={form.category} onChange={e => setForm({ ...form, category: e.target.value, brand: '' })}>
-            <option value="" disabled>Select Category</option>
-            {CATEGORY_OPTIONS.map(opt => (
-              <option key={opt.value} value={opt.value}>{opt.label}</option>
-            ))}
-          </select>
-          <input className="border rounded p-2" required type="number" min="0" step="0.01" placeholder="Price" value={form.price} onChange={e => setForm({ ...form, price: e.target.value })} />
-          <input className="border rounded p-2" type="number" min="0" step="0.01" placeholder="Cost Price" value={form.costPrice} onChange={e => setForm({ ...form, costPrice: e.target.value })} />
-          <input className="border rounded p-2" type="number" min="0" step="1" placeholder="Stock" value={form.stock} onChange={e => setForm({ ...form, stock: e.target.value })} />
-          <select className="border rounded p-2" value={form.unit} onChange={e => setForm({ ...form, unit: e.target.value })}>
-            {['unit','kg','g','lb','litre','ml','pack','box','dozen','bundle'].map(u => <option key={u} value={u}>{u}</option>)}
-          </select>
-          <select className="border rounded p-2" value={form.status} onChange={e => setForm({ ...form, status: e.target.value })}>
-            {['active','inactive'].map(s => <option key={s} value={s}>{s}</option>)}
-          </select>
-          {/* Brand depends on category */}
-          <select className="border rounded p-2" required disabled={!form.category} value={form.brand} onChange={e => setForm({ ...form, brand: e.target.value })}>
-            <option value="" disabled>{form.category ? 'Select Brand' : 'Select category first'}</option>
-            {getBrandsForCategory(form.category).map(b => (
-              <option key={b} value={b}>{b}</option>
-            ))}
-          </select>
-          <input className="border rounded p-2 col-span-1 md:col-span-2" placeholder="Tags (comma separated)" value={form.tags} onChange={e => setForm({ ...form, tags: e.target.value })} />
-          <textarea className="border rounded p-2 md:col-span-3" placeholder="Description" value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} />
+          {/* Name */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Name *</label>
+            <input className={`border rounded p-2 w-full ${errors.name ? 'border-red-500' : 'border-gray-300'}`} placeholder="Enter product name" value={form.name} onChange={e => { setForm({ ...form, name: e.target.value }); if (errors.name) setErrors({ ...errors, name: '' }); }} />
+            {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name}</p>}
+          </div>
+          {/* SKU */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">SKU *</label>
+            <input className={`border rounded p-2 w-full ${errors.sku ? 'border-red-500' : 'border-gray-300'}`} placeholder="Enter SKU" value={form.sku} onChange={e => { setForm({ ...form, sku: e.target.value }); if (errors.sku) setErrors({ ...errors, sku: '' }); }} />
+            {errors.sku && <p className="text-red-500 text-xs mt-1">{errors.sku}</p>}
+          </div>
+          {/* Category */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Category *</label>
+            <select className={`border rounded p-2 w-full ${errors.category ? 'border-red-500' : 'border-gray-300'}`} value={form.category} onChange={async e => {
+              const category = e.target.value;
+              setForm({ ...form, category, brand: '', supplierId: '' });
+              if (errors.category) setErrors({ ...errors, category: '' });
+              try {
+                const list = await supplierService.listByCategory(category, 'active');
+                setSuppliers(list);
+              } catch { setSuppliers([]); }
+            }}>
+              <option value="" disabled>Select Category</option>
+              {CATEGORY_OPTIONS.map(opt => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ))}
+            </select>
+            {errors.category && <p className="text-red-500 text-xs mt-1">{errors.category}</p>}
+          </div>
+          {/* Price */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Price *</label>
+            <input className={`border rounded p-2 w-full ${errors.price ? 'border-red-500' : 'border-gray-300'}`} type="number" min="0" step="0.01" placeholder="0.00" value={form.price} onChange={e => { setForm({ ...form, price: e.target.value }); if (errors.price) setErrors({ ...errors, price: '' }); }} />
+            {errors.price && <p className="text-red-500 text-xs mt-1">{errors.price}</p>}
+          </div>
+          {/* Cost Price */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Cost Price</label>
+            <input className={`border rounded p-2 w-full ${errors.costPrice ? 'border-red-500' : 'border-gray-300'}`} type="number" min="0" step="0.01" placeholder="0.00" value={form.costPrice} onChange={e => { setForm({ ...form, costPrice: e.target.value }); if (errors.costPrice) setErrors({ ...errors, costPrice: '' }); }} />
+            {errors.costPrice && <p className="text-red-500 text-xs mt-1">{errors.costPrice}</p>}
+          </div>
+          {/* Stock */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Stock</label>
+            <input className={`border rounded p-2 w-full ${errors.stock ? 'border-red-500' : 'border-gray-300'}`} type="number" min="0" step="1" placeholder="0" value={form.stock} onChange={e => { setForm({ ...form, stock: e.target.value }); if (errors.stock) setErrors({ ...errors, stock: '' }); }} />
+            {errors.stock && <p className="text-red-500 text-xs mt-1">{errors.stock}</p>}
+          </div>
+          {/* Unit */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Unit *</label>
+            <select className={`border rounded p-2 w-full ${errors.unit ? 'border-red-500' : 'border-gray-300'}`} value={form.unit} onChange={e => { setForm({ ...form, unit: e.target.value }); if (errors.unit) setErrors({ ...errors, unit: '' }); }}>
+              {['unit','kg','g','lb','litre','ml','pack','box','dozen','bundle'].map(u => <option key={u} value={u}>{u}</option>)}
+            </select>
+            {errors.unit && <p className="text-red-500 text-xs mt-1">{errors.unit}</p>}
+          </div>
+          {/* Status */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+            <select className="border rounded p-2 w-full" value={form.status} onChange={e => setForm({ ...form, status: e.target.value })}>
+              {['active','inactive'].map(s => <option key={s} value={s}>{s}</option>)}
+            </select>
+          </div>
+          {/* Brand */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Brand *</label>
+            <select className={`border rounded p-2 w-full ${errors.brand ? 'border-red-500' : 'border-gray-300'}`} disabled={!form.category} value={form.brand} onChange={e => { setForm({ ...form, brand: e.target.value }); if (errors.brand) setErrors({ ...errors, brand: '' }); }}>
+              <option value="" disabled>{form.category ? 'Select Brand' : 'Select category first'}</option>
+              {getBrandsForCategory(form.category).map(b => (
+                <option key={b} value={b}>{b}</option>
+              ))}
+            </select>
+            {errors.brand && <p className="text-red-500 text-xs mt-1">{errors.brand}</p>}
+          </div>
+          {/* Supplier */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Supplier *</label>
+            <select className={`border rounded p-2 w-full ${errors.supplierId ? 'border-red-500' : 'border-gray-300'}`} disabled={!form.category} value={form.supplierId} onChange={e => { setForm({ ...form, supplierId: e.target.value }); if (errors.supplierId) setErrors({ ...errors, supplierId: '' }); }}>
+              <option value="" disabled>{form.category ? 'Select Supplier' : 'Select category first'}</option>
+              {suppliers.map(s => (
+                <option key={s.id || s._id} value={s.id || s._id}>{s.name}</option>
+              ))}
+            </select>
+            {errors.supplierId && <p className="text-red-500 text-xs mt-1">{errors.supplierId}</p>}
+          </div>
+          {/* Tags */}
+          <div className="md:col-span-2">
+            <label className="block text-sm font-medium text-gray-700 mb-1">Tags</label>
+            <input className="border rounded p-2 w-full" placeholder="Comma separated" value={form.tags} onChange={e => setForm({ ...form, tags: e.target.value })} />
+          </div>
+          {/* Description */}
+          <div className="md:col-span-3">
+            <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+            <textarea className="border rounded p-2 w-full" placeholder="Short description..." value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} />
+          </div>
           <div className="md:col-span-3 flex gap-3">
             <button type="submit" className="bg-emerald-600 text-white px-4 py-2 rounded flex items-center gap-2">
               <FiPlus /> {editing ? 'Update Product' : 'Add Product'}
@@ -235,7 +342,7 @@ function InventoryManager() {
             setLoading(true);
             try {
               const res = await productService.list({ page: 1, limit: 100, status: 'active', category: cat });
-              setProducts(res.data.items || []);
+              setProducts((res.data.items || []).filter(it => it.status === 'active'));
             } finally {
               setLoading(false);
             }

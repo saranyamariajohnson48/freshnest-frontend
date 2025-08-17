@@ -13,7 +13,7 @@ const AddSupplierForm = ({ isOpen, onClose, onSupplierCreated, editingSupplier =
     email: '',
     phone: '',
     address: '',
-    category: 'Vegetables',
+    category: 'Biscuits Pack',
     status: 'active',
     paymentTerms: 'Net 30',
     notes: ''
@@ -21,18 +21,13 @@ const AddSupplierForm = ({ isOpen, onClose, onSupplierCreated, editingSupplier =
 
   const [errors, setErrors] = useState({});
 
-  // Categories for dropdown
+  // Categories for dropdown (restricted)
   const categories = [
-    'Vegetables',
-    'Fruits',
-    'Dairy',
-    'Bakery',
-    'Meat & Poultry',
-    'Seafood',
-    'Grains & Cereals',
-    'Beverages',
-    'Spices & Herbs',
-    'Other'
+    'Biscuits Pack',
+    'Noodles Pack',
+    'Chips Pack',
+    'Chocolate Pack',
+    'Juice Pack'
   ];
 
   const paymentTermsOptions = [
@@ -53,7 +48,7 @@ const AddSupplierForm = ({ isOpen, onClose, onSupplierCreated, editingSupplier =
         email: editingSupplier.email || '',
         phone: editingSupplier.phone || '',
         address: editingSupplier.address || '',
-        category: editingSupplier.category || 'Vegetables',
+        category: editingSupplier.category || 'Biscuits Pack',
         status: editingSupplier.status || 'active',
         paymentTerms: editingSupplier.paymentTerms || 'Net 30',
         notes: editingSupplier.notes || ''
@@ -66,7 +61,7 @@ const AddSupplierForm = ({ isOpen, onClose, onSupplierCreated, editingSupplier =
         email: '',
         phone: '',
         address: '',
-        category: 'Vegetables',
+        category: 'Biscuits Pack',
         status: 'active',
         paymentTerms: 'Net 30',
         notes: ''
@@ -115,6 +110,12 @@ const AddSupplierForm = ({ isOpen, onClose, onSupplierCreated, editingSupplier =
 
     if (!formData.address.trim()) {
       newErrors.address = 'Address is required';
+    }
+
+    // Category restriction
+    const allowedCategories = ['Biscuits Pack','Noodles Pack','Chips Pack','Chocolate Pack','Juice Pack'];
+    if (!allowedCategories.includes(formData.category)) {
+      newErrors.category = 'Invalid category selected';
     }
 
     // Password validation for new supplier
@@ -368,13 +369,13 @@ const AddSupplierForm = ({ isOpen, onClose, onSupplierCreated, editingSupplier =
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Category
+                  Category*
                 </label>
                 <select
                   name="category"
                   value={formData.category}
                   onChange={handleInputChange}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
+                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors ${errors.category ? 'border-red-500' : 'border-gray-300'}`}
                   disabled={loading}
                 >
                   {categories.map(category => (
@@ -383,6 +384,9 @@ const AddSupplierForm = ({ isOpen, onClose, onSupplierCreated, editingSupplier =
                     </option>
                   ))}
                 </select>
+                {errors.category && (
+                  <p className="text-red-500 text-sm mt-1">{errors.category}</p>
+                )}
               </div>
 
               <div>

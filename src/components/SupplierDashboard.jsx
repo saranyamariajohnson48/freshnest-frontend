@@ -26,6 +26,10 @@ import {
   FiStar
 } from 'react-icons/fi';
 
+// Lazy components
+const SupplierOrdersLazy = React.lazy(() => import('./SupplierOrders'));
+const SupplierDeliveriesLazy = React.lazy(() => import('./SupplierDeliveries'));
+
 const SupplierDashboard = () => {
   const navigate = useNavigate();
   const { signOut } = useClerk();
@@ -242,7 +246,7 @@ const SupplierDashboard = () => {
                 <div className="xl:col-span-2 bg-white border border-slate-200 rounded-2xl p-6">
                   <div className="flex items-center justify-between mb-4">
                     <h3 className="text-lg font-semibold text-slate-900">Recent Orders</h3>
-                    <button className="text-sm text-emerald-700 hover:underline">View all</button>
+                    <button onClick={() => setActiveSection('orders')} className="text-sm text-emerald-700 hover:underline">View all</button>
                   </div>
                   <div className="text-slate-500 text-sm">No orders to display yet.</div>
                 </div>
@@ -260,25 +264,21 @@ const SupplierDashboard = () => {
             </>
           )}
 
-          {/* Orders placeholder */}
+          {/* Orders */}
           {activeSection === 'orders' && (
-            <div className="bg-white border border-slate-200 rounded-2xl p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-slate-900">Orders</h3>
-                <button className="text-sm text-emerald-700 hover:underline">Refresh</button>
-              </div>
-              <div className="text-slate-500">Orders module coming soon.</div>
+            <div className="bg-transparent">
+              <React.Suspense fallback={<div className="p-6">Loading orders...</div>}>
+                <SupplierOrdersLazy />
+              </React.Suspense>
             </div>
           )}
 
-          {/* Deliveries placeholder */}
+          {/* Deliveries */}
           {activeSection === 'deliveries' && (
-            <div className="bg-white border border-slate-200 rounded-2xl p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-slate-900">Deliveries</h3>
-                <button className="text-sm text-emerald-700 hover:underline">Refresh</button>
-              </div>
-              <div className="text-slate-500">Deliveries module coming soon.</div>
+            <div className="bg-transparent">
+              <React.Suspense fallback={<div className="p-6">Loading deliveries...</div>}>
+                <SupplierDeliveriesLazy />
+              </React.Suspense>
             </div>
           )}
 

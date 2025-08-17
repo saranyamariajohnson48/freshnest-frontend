@@ -263,17 +263,29 @@ class SupplierService {
   async getSupplierById(id) {
     try {
       const response = await this.apiRequest(`${API_BASE_URL}/api/users/${id}`);
-
       const data = await response.json();
-
       if (!response.ok) {
+        // If forbidden for non-admins, fall back to own profile
+        if (response.status === 403 || response.status === 401) {
+          const profileResp = await authService.apiRequest(`${API_BASE_URL}/api/auth/profile`);
+          const profileData = await profileResp.json();
+          if (!profileResp.ok) throw new Error(profileData.error || 'Failed to fetch profile');
+          return { user: profileData.user };
+        }
         throw new Error(data.error || 'Failed to fetch supplier');
       }
-
       return data;
     } catch (error) {
       console.error('Get supplier error:', error);
-      throw error;
+      // Last resort: try profile endpoint directly
+      try {
+        const profileResp = await authService.apiRequest(`${API_BASE_URL}/api/auth/profile`);
+        const profileData = await profileResp.json();
+        if (!profileResp.ok) throw new Error(profileData.error || 'Failed to fetch profile');
+        return { user: profileData.user };
+      } catch (e) {
+        throw error;
+      }
     }
   }
 
@@ -514,6 +526,18 @@ class SupplierService {
     } catch (error) {
       console.error('Local search suppliers error:', error);
       throw error;
+    }
+  }
+
+  // List suppliers by category (for inventory linking)
+  async listByCategory(category, status = 'active') {
+    try {
+      const res = await this.getAllSuppliers({ category, status, limit: 200 });
+      const users = res.users || [];
+      return users.map(u => this.transformUserToSupplier(u));
+    } catch (e) {
+      console.error('listByCategory failed:', e);
+      return [];
     }
   }
 
