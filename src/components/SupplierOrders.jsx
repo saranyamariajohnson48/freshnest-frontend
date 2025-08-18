@@ -168,21 +168,37 @@ export default function SupplierOrders() {
           </thead>
           <tbody>
             {filtered.map((o) => (
-              <tr key={o._id} className="border-t border-slate-200 text-slate-800">
-                <td className="py-2">{o._id.slice(-6)}</td>
-                <td className="py-2">{o.brand || o.product || '-'}</td>
-                <td className="py-2">{o.quantity}</td>
-                <td className="py-2">{o.status}</td>
-                <td className="py-2">{new Date(o.createdAt).toLocaleDateString()}</td>
-                <td className="py-2 space-x-2">
-                  {o.status === 'Pending' && (
-                    <button onClick={()=>updateStatus(o._id, 'In Transit')} className="px-3 py-1 text-xs bg-blue-50 text-blue-700 rounded">Mark In Transit</button>
-                  )}
-                  {o.status === 'In Transit' && (
-                    <button onClick={()=>updateStatus(o._id, 'Delivered')} className="px-3 py-1 text-xs bg-emerald-50 text-emerald-700 rounded">Mark Delivered</button>
-                  )}
-                </td>
-              </tr>
+              <>
+                <tr key={o._id} className="border-t border-slate-200 text-slate-800">
+                  <td className="py-2">{o._id.slice(-6)}</td>
+                  <td className="py-2">{o.brand || o.product || '-'}</td>
+                  <td className="py-2">{o.quantity}</td>
+                  <td className="py-2">{o.status}</td>
+                  <td className="py-2">{new Date(o.createdAt).toLocaleDateString()}</td>
+                  <td className="py-2 space-x-2">
+                    {o.status === 'Pending' && (
+                      <button onClick={()=>updateStatus(o._id, 'In Transit')} className="px-3 py-1 text-xs bg-blue-50 text-blue-700 rounded">Mark In Transit</button>
+                    )}
+                    {o.status === 'In Transit' && (
+                      <button onClick={()=>updateStatus(o._id, 'Delivered')} className="px-3 py-1 text-xs bg-emerald-50 text-emerald-700 rounded">Mark Delivered</button>
+                    )}
+                  </td>
+                </tr>
+
+                {o.status === 'Delivered' && o.adminConfirmed && (
+                  <tr className="border-t border-emerald-100">
+                    <td colSpan="6" className="py-2">
+                      <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-emerald-800 flex items-start gap-2">
+                        <FiCheck className="mt-0.5"/>
+                        <div>
+                          <div className="font-medium">Delivery confirmed by Admin</div>
+                          <div className="text-sm">Shipment has reached the warehouse {o.adminConfirmedAt ? `on ${new Date(o.adminConfirmedAt).toLocaleDateString()}` : ''}.</div>
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                )}
+              </>
             ))}
             {filtered.length === 0 && (
               <tr>
