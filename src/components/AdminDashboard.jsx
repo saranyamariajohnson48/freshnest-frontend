@@ -14,6 +14,7 @@ import InventoryManager from './InventoryManager';
 
 // Lazy components
 const AdminOrdersLazy = React.lazy(() => import('./AdminOrders'));
+const AdminMessagesLazy = React.lazy(() => import('./AdminMessages'));
 
 import { 
   FiHome, 
@@ -84,7 +85,9 @@ ChartJS.register(
 const AdminDashboard = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false); // Start closed on mobile
   const [activeSection, setActiveSection] = useState('dashboard');
+  const [unreadCount, setUnreadCount] = useState(0);
   const [timeRange, setTimeRange] = useState('7d');
+  const { info: toastInfo } = useToastContext();
   const [showAddStaffForm, setShowAddStaffForm] = useState(false);
   const [staffRefreshTrigger, setStaffRefreshTrigger] = useState(0);
   
@@ -145,6 +148,38 @@ const AdminDashboard = () => {
       window.removeEventListener('resize', handleResize);
       tokenManager.stopAutoRefresh();
     };
+  }, []);
+
+  // Poll chat for unread badge and toast on new incoming messages
+  useEffect(() => {
+    let mounted = true;
+    let lastSeenIds = new Set();
+    const poll = async () => {
+      try {
+        const { conversations } = await (await import('../services/chatService')).default.listConversations();
+        const me = (await import('../services/authService')).default.getUser();
+        const { computeUnread } = (await import('../services/chatService')).default;
+        const unread = computeUnread(conversations, me?._id || me?.id);
+        if (!mounted) return;
+        setUnreadCount(unread.total);
+        // Toast for new messages: if last message id not in lastSeenIds and not mine
+        for (const c of conversations || []) {
+          const last = c.lastMessage;
+          if (last && String(last.sender) !== String(me?._id || me?.id)) {
+            const key = `${c._id}-${last.at}`;
+            if (!lastSeenIds.has(key)) {
+              toastInfo(`New message from ${c.participants?.find(p => String(p._id) !== String(me?._id || me?.id))?.fullName || 'a user'}`);
+              lastSeenIds.add(key);
+            }
+          }
+        }
+      } catch (e) {
+        // Silent
+      }
+    };
+    poll();
+    const id = setInterval(poll, 7000);
+    return () => { mounted = false; clearInterval(id); };
   }, []);
 
   // Load announcements from service
@@ -523,6 +558,7 @@ const AdminDashboard = () => {
     { id: 'orders', label: 'Orders', icon: FiShoppingCart, badge: null },
     { id: 'staff', label: 'Staff', icon: FiUsers, badge: null },
     { id: 'leave-management', label: 'Leave Management', icon: FiCalendar, badge: null },
+    { id: 'messages', label: 'Messages', icon: FiMessageSquare, badge: unreadCount ? String(unreadCount) : null },
     { id: 'announcements', label: 'Announcements', icon: FiMessageSquare, badge: announcements.filter(a => a.isActive).length.toString() },
     { id: 'suppliers', label: 'Suppliers', icon: FiTruck, badge: null },
     { id: 'reports', label: 'Reports', icon: FiBarChart2, badge: null },
@@ -1822,6 +1858,15 @@ const AdminDashboard = () => {
                 onAddSupplier={handleAddSupplier}
                 refreshTrigger={supplierRefreshTrigger}
               />
+            </div>
+          )}
+
+          {/* Messages Section */}
+          {activeSection === 'messages' && (
+            <div className="space-y-6 lg:space-y-8">
+              <React.Suspense fallback={<div className="p-6">Loading messages...</div>}>
+                <AdminMessagesLazy />
+              </React.Suspense>
             </div>
           )}
 

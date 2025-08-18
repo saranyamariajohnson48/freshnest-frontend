@@ -40,7 +40,8 @@ import {
   FiStar,
   FiAward,
   FiTarget,
-  FiBarChart2
+  FiBarChart2,
+  FiMessageSquare
 } from 'react-icons/fi';
 
 const StaffDashboard = () => {
@@ -54,8 +55,10 @@ const StaffDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeSection, setActiveSection] = useState('dashboard');
+  const RoleMessagesLazy = React.lazy(() => import('./RoleMessages'));
   const [currentTime, setCurrentTime] = useState(new Date());
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
   
   // Leave management states
   const [showLeaveForm, setShowLeaveForm] = useState(false);
@@ -98,6 +101,37 @@ const StaffDashboard = () => {
       setCurrentTime(new Date());
     }, 60000);
     return () => clearInterval(timer);
+  }, []);
+
+  // Poll chat for unread badge and toast on new incoming messages
+  useEffect(() => {
+    let mounted = true;
+    let lastSeen = new Set();
+    const poll = async () => {
+      try {
+        const chat = (await import('../services/chatService')).default;
+        const me = (await import('../services/authService')).default.getUser();
+        const { conversations } = await chat.listConversations();
+        const unread = chat.computeUnread(conversations, me?._id || me?.id);
+        if (!mounted) return;
+        setUnreadCount(unread.total);
+        // Optional inline toast using window.dispatchEvent to notify ToastProvider via custom event if needed
+        for (const c of conversations || []) {
+          const last = c.lastMessage;
+          if (last && String(last.sender) !== String(me?._id || me?.id)) {
+            const key = `${c._id}-${last.at}`;
+            if (!lastSeen.has(key)) {
+              // Basic toast via alert-like event: rely on already mounted ToastProvider hook elsewhere
+              // If you prefer, wire useToastContext here and call info()
+              lastSeen.add(key);
+            }
+          }
+        }
+      } catch {}
+    };
+    poll();
+    const id = setInterval(poll, 8000);
+    return () => { mounted = false; clearInterval(id); };
   }, []);
 
   // Load user data and dashboard info
@@ -522,6 +556,7 @@ const StaffDashboard = () => {
     { id: 'leave', label: 'Leave Management', icon: FiCalendar },
     { id: 'salary', label: 'Salary Slips', icon: FiDollarSign },
     { id: 'stock', label: 'Stock Activity', icon: FiPackage },
+    { id: 'messages', label: 'Messages', icon: FiMessageSquare, badge: unreadCount ? String(unreadCount) : null },
     { id: 'notifications', label: 'Notifications', icon: FiBell },
     { id: 'profile', label: 'My Profile', icon: FiUser }
   ];
@@ -624,6 +659,18 @@ const StaffDashboard = () => {
                 className="px-3 py-1 text-xs bg-red-100 text-red-600 rounded hover:bg-red-200"
               >
                 Test Logout
+              </button>
+              <button
+                onClick={() => setActiveSection('messages')}
+                className="relative p-2 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100"
+                title="Messages"
+              >
+                <FiMessageSquare className="w-5 h-5" />
+                {unreadCount > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-red-600 text-white text-[10px] rounded-full px-1.5 py-0.5 leading-none">
+                    {unreadCount}
+                  </span>
+                )}
               </button>
               <div className="text-right">
                 <p className="text-sm font-medium text-gray-900">{user?.fullName}</p>
@@ -1120,6 +1167,15 @@ const StaffDashboard = () => {
                   </div>
                 </div>
               </div>
+            </div>
+          )}
+
+          {/* Messages Section */}
+          {activeSection === 'messages' && (
+            <div className="p-4">
+              <React.Suspense fallback={<div className="p-6">Loading messages...</div>}>
+                <RoleMessagesLazy />
+              </React.Suspense>
             </div>
           )}
 

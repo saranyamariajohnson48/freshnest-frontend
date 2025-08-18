@@ -5,6 +5,7 @@ import { useAuth } from '../hooks/useAuth';
 import { useToastContext } from '../contexts/ToastContext';
 import tokenManager from '../utils/tokenManager';
 import supplierService from '../services/supplierService';
+import authService from '../services/authService';
 import {
   FiHome,
   FiPackage,
@@ -23,12 +24,14 @@ import {
   FiRefreshCw,
   FiCalendar,
   FiDollarSign,
-  FiStar
+  FiStar,
+  FiMessageSquare
 } from 'react-icons/fi';
 
 // Lazy components
 const SupplierOrdersLazy = React.lazy(() => import('./SupplierOrders'));
 const SupplierDeliveriesLazy = React.lazy(() => import('./SupplierDeliveries'));
+const RoleMessagesLazy = React.lazy(() => import('./RoleMessages'));
 
 const SupplierDashboard = () => {
   const navigate = useNavigate();
@@ -40,6 +43,7 @@ const SupplierDashboard = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeSection, setActiveSection] = useState('overview');
   const [supplier, setSupplier] = useState(null);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   // Simple sample metrics (replace with real API later)
   const [metrics, setMetrics] = useState({
@@ -66,14 +70,10 @@ const SupplierDashboard = () => {
 
         // Attempt to refresh supplier from backend for latest details
         try {
-          const id = authUser._id || authUser.id;
-          if (id) {
-            const resp = await supplierService.getSupplierById(id);
-            // supplierService.getSupplierById returns { user: ... } or similar
-            const backendUser = resp.user || resp.staff || resp; // be lenient
-            if (backendUser) {
-              setSupplier({ ...authUser, ...backendUser });
-            }
+          // Prefer profile endpoint to avoid 403 on /api/users/:id for non-admin
+          const freshProfile = await authService.getProfile();
+          if (freshProfile) {
+            setSupplier({ ...authUser, ...freshProfile });
           }
         } catch (e) {
           // Non-blocking
@@ -101,6 +101,34 @@ const SupplierDashboard = () => {
 
     return () => tokenManager.stopAutoRefresh();
   }, [authUser, navigate, error, supplier?.supplierDetails?.rating]);
+
+  // Poll chat for unread badge and toast on new incoming messages
+  useEffect(() => {
+    let mounted = true;
+    let lastSeen = new Set();
+    const poll = async () => {
+      try {
+        const chat = (await import('../services/chatService')).default;
+        const me = (await import('../services/authService')).default.getUser();
+        const { conversations } = await chat.listConversations();
+        const unread = chat.computeUnread(conversations, me?._id || me?.id);
+        if (!mounted) return;
+        setUnreadCount(unread.total);
+        for (const c of conversations || []) {
+          const last = c.lastMessage;
+          if (last && String(last.sender) !== String(me?._id || me?.id)) {
+            const key = `${c._id}-${last.at}`;
+            if (!lastSeen.has(key)) {
+              lastSeen.add(key);
+            }
+          }
+        }
+      } catch {}
+    };
+    poll();
+    const id = setInterval(poll, 8000);
+    return () => { mounted = false; clearInterval(id); };
+  }, []);
 
   const formatCurrency = (n) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(n || 0);
 
@@ -145,6 +173,18 @@ const SupplierDashboard = () => {
             </div>
           </div>
           <div className="flex items-center gap-3">
+            <button
+              onClick={() => setActiveSection('messages')}
+              className="relative p-2 rounded-lg hover:bg-slate-100"
+              title="Messages"
+            >
+              <FiMessageSquare className="w-5 h-5"/>
+              {unreadCount > 0 && (
+                <span className="absolute -top-1 -right-1 bg-red-600 text-white text-[10px] rounded-full px-1.5 py-0.5 leading-none">
+                  {unreadCount}
+                </span>
+              )}
+            </button>
             <button className="p-2 rounded-lg hover:bg-slate-100"><FiRefreshCw className="w-5 h-5"/></button>
             <button onClick={handleLogout} className="flex items-center gap-2 bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700">
               <FiLogOut className="w-4 h-4"/> Logout
@@ -175,6 +215,7 @@ const SupplierDashboard = () => {
                 { id: 'overview', label: 'Overview', icon: <FiHome className="w-4 h-4"/> },
                 { id: 'orders', label: 'Orders', icon: <FiClipboard className="w-4 h-4"/> },
                 { id: 'deliveries', label: 'Deliveries', icon: <FiTruck className="w-4 h-4"/> },
+                { id: 'messages', label: 'Messages', icon: <FiMessageSquare className="w-4 h-4"/> },
                 { id: 'performance', label: 'Performance', icon: <FiTrendingUp className="w-4 h-4"/> },
                 { id: 'profile', label: 'Profile', icon: <FiSettings className="w-4 h-4"/> },
               ].map(item => (
@@ -278,6 +319,15 @@ const SupplierDashboard = () => {
             <div className="bg-transparent">
               <React.Suspense fallback={<div className="p-6">Loading deliveries...</div>}>
                 <SupplierDeliveriesLazy />
+              </React.Suspense>
+            </div>
+          )}
+
+          {/* Messages */}
+          {activeSection === 'messages' && (
+            <div className="bg-transparent">
+              <React.Suspense fallback={<div className="p-6">Loading messages...</div>}>
+                <RoleMessagesLazy />
               </React.Suspense>
             </div>
           )}
