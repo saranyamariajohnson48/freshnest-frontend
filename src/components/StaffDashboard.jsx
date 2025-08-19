@@ -7,6 +7,8 @@ import tokenManager from '../utils/tokenManager';
 import { useAuth } from '../hooks/useAuth';
 import announcementService from '../services/announcementService';
 import leaveService from '../services/leaveService';
+import staffService from '../services/staffService';
+import taskService from '../services/taskService';
 import { 
   FiHome, 
   FiClock, 
@@ -95,6 +97,20 @@ const StaffDashboard = () => {
   const [stockActivity, setStockActivity] = useState([]);
   const [announcements, setAnnouncements] = useState([]);
 
+  // Task management states
+  const [isSupervisor, setIsSupervisor] = useState(false);
+  const [staffList, setStaffList] = useState([]);
+  const [tasksCreatedByMe, setTasksCreatedByMe] = useState([]);
+  const [tasksAssignedToMe, setTasksAssignedToMe] = useState([]);
+  const [showTaskForm, setShowTaskForm] = useState(false);
+  const [taskForm, setTaskForm] = useState({
+    title: '',
+    description: '',
+    assignedTo: '',
+    dueDate: '',
+    priority: 'Medium'
+  });
+
   // Update time every minute
   useEffect(() => {
     const timer = setInterval(() => {
@@ -146,11 +162,40 @@ const StaffDashboard = () => {
         }
         
         setUser(authUser);
+        const supervisorFlag = String(authUser?.position || '').toLowerCase().includes('supervisor');
+        setIsSupervisor(supervisorFlag);
         
         // Start token auto-refresh for authenticated user
         tokenManager.startAutoRefresh();
         
         await loadDashboardData(authUser);
+        if (supervisorFlag) {
+          // Load active staff (non-supervisors) for assignment
+          try {
+            const { staff } = await staffService.getAllStaff({ status: 'active', limit: 1000 });
+            const currentId = String(authUser?._id || authUser?.id || '');
+            const filtered = (staff || []).filter(s => {
+              const isSupervisor = String(s.position || '').toLowerCase().includes('supervisor');
+              const isSelf = String(s._id || s.id || '') === currentId;
+              return !isSupervisor && !isSelf;
+            });
+            setStaffList(filtered);
+            // Load tasks created by me
+            const created = await taskService.listTasks({ mine: 'true' });
+            setTasksCreatedByMe(created.data || []);
+            // Also load tasks assigned to me
+            const assigned = await taskService.listTasks({ mine: 'false' });
+            setTasksAssignedToMe(assigned.data || []);
+          } catch (e) {
+            console.error('Task preload error:', e);
+          }
+        } else {
+          // Regular staff: load tasks assigned to me
+          try {
+            const assigned = await taskService.listTasks();
+            setTasksAssignedToMe(assigned.data || []);
+          } catch (e) {}
+        }
       } catch (error) {
         console.error('Error loading user data:', error);
         showError('Failed to load dashboard data');
@@ -561,6 +606,10 @@ const StaffDashboard = () => {
     { id: 'profile', label: 'My Profile', icon: FiUser }
   ];
 
+  if (isSupervisor) {
+    sidebarItems.splice(3, 0, { id: 'tasks', label: 'Task Management', icon: FiTarget });
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -712,6 +761,10 @@ const StaffDashboard = () => {
                         <FiMapPin className="w-4 h-4" />
                         <span>Role: {user?.role}</span>
                       </div>
+                      <div className="flex items-center space-x-2">
+                        <FiAward className="w-4 h-4" />
+                        <span>Position: {user?.position || 'Staff'}</span>
+                      </div>
                     </div>
                   </div>
                   <div className="text-right">
@@ -781,6 +834,16 @@ const StaffDashboard = () => {
                   <h3 className="font-semibold mb-1">My Profile</h3>
                   <p className="text-sm opacity-75">Update details</p>
                 </button>
+                {isSupervisor && (
+                  <button
+                    onClick={() => setActiveSection('tasks')}
+                    className="p-6 rounded-xl border-2 border-dashed border-emerald-200 bg-white hover:border-emerald-400 hover:bg-emerald-50 text-emerald-600 transition-all"
+                  >
+                    <FiTarget className="w-8 h-8 mx-auto mb-3" />
+                    <h3 className="font-semibold mb-1">Assign Tasks</h3>
+                    <p className="text-sm opacity-75">Supervisor only</p>
+                  </button>
+                )}
               </div>
 
               {/* Stats Cards */}
@@ -943,6 +1006,87 @@ const StaffDashboard = () => {
                         <p className="text-sm text-gray-500">No announcements or notifications</p>
                       </div>
                     )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Task Management (Supervisor only) */}
+          {activeSection === 'tasks' && isSupervisor && (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-900">Task Management</h2>
+                  <p className="text-gray-600">Assign tasks to staff and track progress</p>
+                </div>
+                <button
+                  onClick={() => setShowTaskForm(true)}
+                  className="flex items-center space-x-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors"
+                >
+                  <FiSend className="w-4 h-4" />
+                  <span>Assign Task</span>
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
+                  <h3 className="font-semibold text-gray-900 mb-4">Tasks I Assigned</h3>
+                  <div className="space-y-3">
+                    {tasksCreatedByMe.length === 0 && (
+                      <p className="text-sm text-gray-500">No tasks assigned yet.</p>
+                    )}
+                    {tasksCreatedByMe.map((t) => (
+                      <div key={t._id} className="p-3 rounded-lg border border-gray-200">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="font-medium text-gray-900">{t.title}</p>
+                            <p className="text-xs text-gray-500">To: {t.assignedTo?.fullName} • Due: {t.dueDate ? new Date(t.dueDate).toLocaleDateString() : '—'}</p>
+                            <div className="mt-1 space-x-2">
+                              <span className={`text-[10px] px-2 py-0.5 rounded-full ${t.priority === 'High' ? 'bg-red-100 text-red-700' : t.priority === 'Medium' ? 'bg-yellow-100 text-yellow-700' : 'bg-blue-100 text-blue-700'}`}>Priority: {t.priority || 'Medium'}</span>
+                              <span className={`text-[10px] px-2 py-0.5 rounded-full ${t.status === 'Completed' ? 'bg-green-100 text-green-700' : t.status === 'In Progress' ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-700'}`}>Status: {t.status}</span>
+                            </div>
+                          </div>
+                          <div />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
+                  <h3 className="font-semibold text-gray-900 mb-4">Tasks Assigned To Me</h3>
+                  <div className="space-y-3">
+                    {tasksAssignedToMe.length === 0 && (
+                      <p className="text-sm text-gray-500">No tasks assigned to you.</p>
+                    )}
+                    {tasksAssignedToMe.map((t) => (
+                      <div key={t._id} className="p-3 rounded-lg border border-gray-200">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="font-medium text-gray-900">{t.title}</p>
+                            <p className="text-xs text-gray-500">From: {t.assignedBy?.fullName} • Due: {t.dueDate ? new Date(t.dueDate).toLocaleDateString() : '—'}</p>
+                            <span className={`text-[10px] px-2 py-0.5 rounded-full inline-block mt-1 ${t.priority === 'High' ? 'bg-red-100 text-red-700' : t.priority === 'Medium' ? 'bg-yellow-100 text-yellow-700' : 'bg-blue-100 text-blue-700'}`}>Priority: {t.priority || 'Medium'}</span>
+                          </div>
+                          <select
+                            value={t.status}
+                            onChange={async (e) => {
+                              try {
+                                const updated = await taskService.updateStatus(t._id, e.target.value);
+                                setTasksAssignedToMe(prev => prev.map(x => x._id === t._id ? updated.data : x));
+                                // also reflect in created list if present
+                                setTasksCreatedByMe(prev => prev.map(x => x._id === t._id ? updated.data : x));
+                              } catch (err) {}
+                            }}
+                            className="text-xs border border-gray-300 rounded px-2 py-1"
+                          >
+                            <option>Pending</option>
+                            <option>In Progress</option>
+                            <option>Completed</option>
+                          </select>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
               </div>
@@ -1296,6 +1440,118 @@ const StaffDashboard = () => {
                     className="flex-1 px-4 py-2 text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg font-medium transition-colors"
                   >
                     Apply
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Assign Task Modal (Supervisor only) */}
+      {showTaskForm && isSupervisor && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-xl font-semibold text-gray-900">Assign Task</h3>
+                <button
+                  onClick={() => setShowTaskForm(false)}
+                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                  <FiX className="w-5 h-5 text-gray-500" />
+                </button>
+              </div>
+
+              <form
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  if (!taskForm.title.trim() || !taskForm.assignedTo) return;
+                  try {
+                    const created = await taskService.createTask(taskForm);
+                    setTasksCreatedByMe(prev => [created.data, ...prev]);
+                    setShowTaskForm(false);
+                    setTaskForm({ title: '', description: '', assignedTo: '', dueDate: '', priority: 'Medium' });
+                    showSuccess('Task assigned');
+                  } catch (err) {
+                    showError(err.message || 'Failed to assign task');
+                  }
+                }}
+                className="space-y-4"
+              >
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Title</label>
+                  <input
+                    type="text"
+                    value={taskForm.title}
+                    onChange={(e) => setTaskForm(prev => ({ ...prev, title: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
+                  <textarea
+                    value={taskForm.description}
+                    onChange={(e) => setTaskForm(prev => ({ ...prev, description: e.target.value }))}
+                    rows={4}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 resize-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Assign To</label>
+                  <select
+                    value={taskForm.assignedTo}
+                    onChange={(e) => setTaskForm(prev => ({ ...prev, assignedTo: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                    required
+                  >
+                    <option value="">Select staff member</option>
+                    {staffList.map(s => (
+                      <option key={s._id} value={s._id}>{s.fullName} — {s.position || 'Staff'}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Due Date</label>
+                    <input
+                      type="date"
+                      value={taskForm.dueDate}
+                      onChange={(e) => setTaskForm(prev => ({ ...prev, dueDate: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Priority</label>
+                    <select
+                      value={taskForm.priority}
+                      onChange={(e) => setTaskForm(prev => ({ ...prev, priority: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                    >
+                      <option value="Low">Low</option>
+                      <option value="Medium">Medium</option>
+                      <option value="High">High</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="flex space-x-3 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => setShowTaskForm(false)}
+                    className="flex-1 px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg font-medium transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="flex-1 px-4 py-2 text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg font-medium transition-colors"
+                  >
+                    Assign
                   </button>
                 </div>
               </form>

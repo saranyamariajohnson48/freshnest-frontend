@@ -439,6 +439,7 @@ const StaffList = ({ onAddStaff, refreshTrigger }) => {
                 <thead>
                   <tr className="border-b border-gray-200">
                     <th className="text-left py-3 px-4 font-medium text-gray-900">Staff Member</th>
+                    <th className="text-left py-3 px-4 font-medium text-gray-900">Position</th>
                     <th className="text-left py-3 px-4 font-medium text-gray-900">Contact</th>
                     <th className="text-left py-3 px-4 font-medium text-gray-900">Work Info</th>
                     <th className="text-left py-3 px-4 font-medium text-gray-900">Status</th>
@@ -457,8 +458,16 @@ const StaffList = ({ onAddStaff, refreshTrigger }) => {
                           </div>
                           <div>
                             <div className="font-medium text-gray-900">{member.fullName}</div>
+                            {member.position && (
+                              <div className="text-xs text-emerald-700 font-medium">{member.position}</div>
+                            )}
                             <div className="text-sm text-gray-500">ID: {member.employeeId || 'N/A'}</div>
                           </div>
+                        </div>
+                      </td>
+                      <td className="py-4 px-4 align-top">
+                        <div className="text-sm font-medium text-gray-800">
+                          {member.position || '—'}
                         </div>
                       </td>
                       <td className="py-4 px-4">

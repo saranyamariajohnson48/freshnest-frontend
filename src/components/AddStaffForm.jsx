@@ -28,18 +28,43 @@ const AddStaffForm = ({ isOpen, onClose, onStaffCreated, editingStaff = null }) 
 
   const [errors, setErrors] = useState({});
 
-  // Position options
-  const positions = [
-    'Staff',
-    'Supervisor',
-    'Manager',
-    'Assistant Manager',
-    'Team Lead',
-    'Cashier',
-    'Stock Clerk',
-    'Customer Service',
-    'Security',
-    'Maintenance'
+  // Position options with responsibilities and example tasks
+  const roleOptions = [
+    {
+      label: 'Warehouse Manager / Supervisor',
+      responsibilities: 'Oversees warehouse operations',
+      exampleTasks: ['Approve requests', 'Monitor stock', 'Assign tasks']
+    },
+    {
+      label: 'Inventory Staff',
+      responsibilities: 'Manage stock in/out, maintain inventory accuracy',
+      exampleTasks: ['Stock entry', 'Stock counting', 'Report low stock']
+    },
+    {
+      label: 'Pickers / Packers',
+      responsibilities: 'Pick items from shelves, pack orders',
+      exampleTasks: ['Pick items for shipment', 'Prepare orders']
+    },
+    {
+      label: 'Delivery/Logistics Staff',
+      responsibilities: 'Handle shipments and deliveries',
+      exampleTasks: ['Dispatch orders', 'Track shipments']
+    },
+    {
+      label: 'Quality Control Staff',
+      responsibilities: 'Inspect goods for quality',
+      exampleTasks: ['Inspect incoming/outgoing stock', 'Report defects']
+    },
+    {
+      label: 'Supplier Coordinator (Optional)',
+      responsibilities: 'Coordinate with suppliers and manage purchase orders',
+      exampleTasks: ['Place orders', 'Follow up with suppliers', 'Maintain supplier records']
+    },
+    {
+      label: 'Staff',
+      responsibilities: 'General support across warehouse operations',
+      exampleTasks: ['Assist in daily operations', 'Follow supervisor instructions']
+    }
   ];
 
   // Department options
@@ -222,7 +247,12 @@ const AddStaffForm = ({ isOpen, onClose, onStaffCreated, editingStaff = null }) 
         staffData.password = formData.password.trim();
       }
       
-      // Note: position, department, emergencyContact, emergencyPhone, notes 
+      // Include position now that backend supports it
+      if (formData.position) {
+        staffData.position = formData.position;
+      }
+
+      // Note: department, emergencyContact, emergencyPhone, notes 
       // are not in the backend User model, so we're excluding them for now
 
       let result;
@@ -418,12 +448,12 @@ const AddStaffForm = ({ isOpen, onClose, onStaffCreated, editingStaff = null }) 
                   name="position"
                   value={formData.position}
                   onChange={handleInputChange}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
                   disabled={loading}
                 >
-                  {positions.map(position => (
-                    <option key={position} value={position}>
-                      {position}
+                  {roleOptions.map(role => (
+                    <option key={role.label} value={role.label}>
+                      {role.label}
                     </option>
                   ))}
                 </select>
