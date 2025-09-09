@@ -1,6 +1,6 @@
 import authService from './authService';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001';
 
 class ProductService {
   async apiRequest(url, options = {}) {
@@ -18,10 +18,19 @@ class ProductService {
     return data;
   }
 
-  // List products
+  // List products (admin)
   async list(params = {}) {
     const query = new URLSearchParams(params);
     const response = await this.apiRequest(`${API_BASE_URL}/api/products?${query}`);
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || 'Failed to fetch products');
+    return data;
+  }
+
+  // Public list products (read-only)
+  async publicList(params = {}) {
+    const query = new URLSearchParams(params);
+    const response = await this.apiRequest(`${API_BASE_URL}/api/products/public?${query}`);
     const data = await response.json();
     if (!response.ok) throw new Error(data.error || 'Failed to fetch products');
     return data;

@@ -43,7 +43,8 @@ import {
   FiAward,
   FiTarget,
   FiBarChart2,
-  FiMessageSquare
+  FiMessageSquare,
+  FiFileText
 } from 'react-icons/fi';
 
 const StaffDashboard = () => {
@@ -172,14 +173,8 @@ const StaffDashboard = () => {
         if (supervisorFlag) {
           // Load active staff (non-supervisors) for assignment
           try {
-            const { staff } = await staffService.getAllStaff({ status: 'active', limit: 1000 });
-            const currentId = String(authUser?._id || authUser?.id || '');
-            const filtered = (staff || []).filter(s => {
-              const isSupervisor = String(s.position || '').toLowerCase().includes('supervisor');
-              const isSelf = String(s._id || s.id || '') === currentId;
-              return !isSupervisor && !isSelf;
-            });
-            setStaffList(filtered);
+            const list = await taskService.listAssignableStaff();
+            setStaffList(list.data || []);
             // Load tasks created by me
             const created = await taskService.listTasks({ mine: 'true' });
             setTasksCreatedByMe(created.data || []);
@@ -599,6 +594,7 @@ const StaffDashboard = () => {
     { id: 'dashboard', label: 'Dashboard', icon: FiHome },
     { id: 'attendance', label: 'Attendance', icon: FiClock },
     { id: 'leave', label: 'Leave Management', icon: FiCalendar },
+    { id: 'jobcard', label: 'Job Card', icon: FiFileText },
     { id: 'salary', label: 'Salary Slips', icon: FiDollarSign },
     { id: 'stock', label: 'Stock Activity', icon: FiPackage },
     { id: 'messages', label: 'Messages', icon: FiMessageSquare, badge: unreadCount ? String(unreadCount) : null },
@@ -834,6 +830,14 @@ const StaffDashboard = () => {
                   <h3 className="font-semibold mb-1">My Profile</h3>
                   <p className="text-sm opacity-75">Update details</p>
                 </button>
+                <button
+                  onClick={() => setActiveSection('jobcard')}
+                  className="p-6 rounded-xl border-2 border-dashed border-teal-200 bg-white hover:border-teal-400 hover:bg-teal-50 text-teal-600 transition-all"
+                >
+                  <FiFileText className="w-8 h-8 mx-auto mb-3" />
+                  <h3 className="font-semibold mb-1">Job Card</h3>
+                  <p className="text-sm opacity-75">View assigned tasks</p>
+                </button>
                 {isSupervisor && (
                   <button
                     onClick={() => setActiveSection('tasks')}
@@ -1007,6 +1011,55 @@ const StaffDashboard = () => {
                       </div>
                     )}
                   </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Job Card - tasks assigned to me */}
+          {activeSection === 'jobcard' && (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-900">Job Card</h2>
+                  <p className="text-gray-600">Tasks assigned to you</p>
+                </div>
+              </div>
+
+              <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
+                <div className="space-y-3">
+                  {tasksAssignedToMe.length === 0 && (
+                    <p className="text-sm text-gray-500">No tasks assigned to you.</p>
+                  )}
+                  {tasksAssignedToMe.map((t) => (
+                    <div key={t._id} className="p-3 rounded-lg border border-gray-200">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="font-medium text-gray-900">{t.title}</p>
+                          <p className="text-xs text-gray-500">From: {t.assignedBy?.fullName} • Due: {t.dueDate ? new Date(t.dueDate).toLocaleDateString() : '—'}</p>
+                          <span className={`text-[10px] px-2 py-0.5 rounded-full inline-block mt-1 ${t.priority === 'High' ? 'bg-red-100 text-red-700' : t.priority === 'Medium' ? 'bg-yellow-100 text-yellow-700' : 'bg-blue-100 text-blue-700'}`}>Priority: {t.priority || 'Medium'}</span>
+                        </div>
+                        <select
+                          value={t.status}
+                          onChange={async (e) => {
+                            try {
+                              const updated = await taskService.updateStatus(t._id, e.target.value);
+                              setTasksAssignedToMe(prev => prev.map(x => x._id === t._id ? updated.data : x));
+                              setTasksCreatedByMe(prev => prev.map(x => x._id === t._id ? updated.data : x));
+                            } catch (err) {}
+                          }}
+                          className="text-xs border border-gray-300 rounded px-2 py-1"
+                        >
+                          <option>Pending</option>
+                          <option>In Progress</option>
+                          <option>Completed</option>
+                        </select>
+                      </div>
+                      {t.description && (
+                        <p className="text-sm text-gray-700 mt-2">{t.description}</p>
+                      )}
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>

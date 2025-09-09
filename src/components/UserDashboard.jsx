@@ -2,6 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useClerk } from '@clerk/clerk-react';
 import authService from '../services/authService';
+import productService from '../services/productService';
+import paymentService from '../services/paymentService';
+import RazorpayStyleGateway from './RazorpayStyleGateway';
+import TransactionDashboard from './TransactionDashboard';
 import { useToastContext } from '../contexts/ToastContext';
 import { 
   FiHome, 
@@ -25,7 +29,14 @@ import {
   FiAlertTriangle,
   FiCheckCircle,
   FiClock,
-  FiMapPin
+  FiMapPin,
+  FiShoppingBag,
+  FiPlus,
+  FiMinus,
+  FiHeart,
+  FiStar,
+  FiCreditCard,
+  FiTrash2
 } from 'react-icons/fi';
 import { Line, Bar, Doughnut } from 'react-chartjs-2';
 import {
@@ -63,6 +74,407 @@ const UserDashboard = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [activeSection, setActiveSection] = useState('overview');
   const [userEmail] = useState('saranyamariajohnson2026@mca.ajce.in');
+  
+  // Shopping cart state
+  const [cart, setCart] = useState([]);
+  const [cartOpen, setCartOpen] = useState(false);
+  const [wishlist, setWishlist] = useState([]);
+  const [checkoutOpen, setCheckoutOpen] = useState(false);
+  const [processingPayment, setProcessingPayment] = useState(false);
+
+  // Shopping cart functions
+  const addToCart = (product, quantity = 1) => {
+    setCart(prevCart => {
+      const existingItem = prevCart.find(item => item._id === product._id);
+      if (existingItem) {
+        return prevCart.map(item =>
+          item._id === product._id
+            ? { ...item, quantity: item.quantity + quantity }
+            : item
+        );
+      }
+      return [...prevCart, { ...product, quantity }];
+    });
+    success(`Added ${product.name} to cart!`);
+  };
+
+  const removeFromCart = (productId) => {
+    setCart(prevCart => prevCart.filter(item => item._id !== productId));
+    success('Item removed from cart');
+  };
+
+  const updateCartQuantity = (productId, quantity) => {
+    if (quantity <= 0) {
+      removeFromCart(productId);
+      return;
+    }
+    setCart(prevCart =>
+      prevCart.map(item =>
+        item._id === productId ? { ...item, quantity } : item
+      )
+    );
+  };
+
+  const toggleWishlist = (product) => {
+    setWishlist(prevWishlist => {
+      const isInWishlist = prevWishlist.find(item => item._id === product._id);
+      if (isInWishlist) {
+        success('Removed from wishlist');
+        return prevWishlist.filter(item => item._id !== product._id);
+      } else {
+        success('Added to wishlist');
+        return [...prevWishlist, product];
+      }
+    });
+  };
+
+  const getCartTotal = () => {
+    return cart.reduce((total, item) => total + (item.price * item.quantity), 0);
+  };
+
+  const getCartItemCount = () => {
+    return cart.reduce((total, item) => total + item.quantity, 0);
+  };
+
+  const handleCheckout = () => {
+    setCartOpen(false);
+    setCheckoutOpen(true);
+  };
+
+  const handlePaymentSuccess = (paymentData) => {
+          success('Payment successful! Order placed successfully! 🎉');
+          setCart([]);
+          setCheckoutOpen(false);
+          setProcessingPayment(false);
+    console.log('Payment successful:', paymentData);
+    
+    // Refresh transaction data if we're on the transactions page
+    if (activeSection === 'transactions') {
+      // Trigger a refresh of the transaction dashboard
+      window.dispatchEvent(new CustomEvent('refreshTransactions'));
+    }
+  };
+
+  const handlePaymentError = (error) => {
+          error(`Payment failed: ${error.message}`);
+          setProcessingPayment(false);
+          console.error('Payment error:', error);
+  };
+
+  const processOrder = () => {
+    setCheckoutOpen(false);
+    setProcessingPayment(true);
+  };
+
+  // Shopping Cart Component
+  const ShoppingCart = () => (
+    <div className={`fixed inset-0 z-50 ${cartOpen ? 'block' : 'hidden'}`}>
+      <div className="absolute inset-0 bg-black bg-opacity-50" onClick={() => setCartOpen(false)}></div>
+      <div className="absolute right-0 top-0 h-full w-96 bg-white shadow-2xl flex flex-col">
+        <div className="p-6 border-b border-gray-200">
+          <div className="flex items-center justify-between">
+            <h3 className="text-xl font-bold text-gray-900">Shopping Cart</h3>
+            <button
+              onClick={() => setCartOpen(false)}
+              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              <FiX className="w-5 h-5 text-gray-600" />
+            </button>
+          </div>
+        </div>
+        
+        <div className="flex-1 overflow-y-auto p-6">
+          {cart.length === 0 ? (
+            <div className="text-center py-12">
+              <FiShoppingCart className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+              <p className="text-gray-500 text-lg">Your cart is empty</p>
+              <p className="text-gray-400 text-sm mt-2">Add some products to get started!</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {cart.map((item) => (
+                <div key={item._id} className="flex items-center space-x-4 p-4 border border-gray-200 rounded-xl">
+                  <div className="w-16 h-16 bg-emerald-100 rounded-lg flex items-center justify-center">
+                    <FiPackage className="w-8 h-8 text-emerald-600" />
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="font-semibold text-gray-900">{item.name}</h4>
+                    <p className="text-sm text-gray-500">{item.category}</p>
+                    <p className="text-lg font-bold text-emerald-600">₹{item.price.toFixed(2)}</p>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <button
+                      onClick={() => updateCartQuantity(item._id, item.quantity - 1)}
+                      className="p-1 hover:bg-gray-100 rounded-lg transition-colors"
+                    >
+                      <FiMinus className="w-4 h-4 text-gray-600" />
+                    </button>
+                    <span className="w-8 text-center font-semibold">{item.quantity}</span>
+                    <button
+                      onClick={() => updateCartQuantity(item._id, item.quantity + 1)}
+                      className="p-1 hover:bg-gray-100 rounded-lg transition-colors"
+                    >
+                      <FiPlus className="w-4 h-4 text-gray-600" />
+                    </button>
+                  </div>
+                  <button
+                    onClick={() => removeFromCart(item._id)}
+                    className="p-2 hover:bg-red-50 rounded-lg transition-colors"
+                  >
+                    <FiTrash2 className="w-4 h-4 text-red-600" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+        
+        {cart.length > 0 && (
+          <div className="p-6 border-t border-gray-200">
+            <div className="flex items-center justify-between mb-4">
+              <span className="text-lg font-semibold text-gray-900">Total:</span>
+              <span className="text-2xl font-bold text-emerald-600">₹{getCartTotal().toFixed(2)}</span>
+            </div>
+            <button 
+              onClick={processOrder}
+              className="w-full bg-emerald-600 text-white py-3 rounded-xl hover:bg-emerald-700 transition-colors font-semibold flex items-center justify-center space-x-2"
+            >
+              <FiCreditCard className="w-5 h-5" />
+              <span>Pay with Razorpay</span>
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
+  // Prepare order data for payment
+  const getOrderData = () => ({
+    items: cart.map(item => ({
+      id: item._id,
+      name: item.name,
+      price: item.price,
+      quantity: item.quantity,
+      category: item.category
+    })),
+    customer: {
+      id: userEmail,
+      name: 'John Doe',
+      email: userEmail,
+      phone: '+1 (555) 123-4567'
+    },
+    totalAmount: getCartTotal()
+  });
+
+  // Shop Component
+  const Shop = () => {
+    const [products, setProducts] = useState([]);
+    const [loading, setLoading] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [selectedCategory, setSelectedCategory] = useState('');
+    const [sortBy, setSortBy] = useState('name');
+
+    const loadProducts = async () => {
+      try {
+        setLoading(true);
+        const params = { page: 1, limit: 50 };
+        if (searchQuery) params.search = searchQuery;
+        if (selectedCategory) params.category = selectedCategory;
+        
+        const response = await productService.publicList(params);
+        let products = response?.data?.items || [];
+        
+        // Sort products
+        products.sort((a, b) => {
+          switch (sortBy) {
+            case 'price-low':
+              return a.price - b.price;
+            case 'price-high':
+              return b.price - a.price;
+            case 'name':
+            default:
+              return a.name.localeCompare(b.name);
+          }
+        });
+        
+        setProducts(products);
+      } catch (err) {
+        console.error('Failed to load products:', err);
+        error('Failed to load products');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    useEffect(() => {
+      loadProducts();
+    }, [searchQuery, selectedCategory, sortBy]);
+
+    const ProductCard = ({ product }) => {
+      const isInWishlist = wishlist.find(item => item._id === product._id);
+      const isInCart = cart.find(item => item._id === product._id);
+      
+      return (
+        <div className="bg-white rounded-2xl border border-gray-200 p-6 hover:shadow-lg transition-all duration-200 group">
+          <div className="relative">
+            <div className="w-full h-48 bg-gradient-to-br from-emerald-100 to-teal-100 rounded-xl flex items-center justify-center mb-4">
+              <FiPackage className="w-16 h-16 text-emerald-600" />
+            </div>
+            <button
+              onClick={() => toggleWishlist(product)}
+              className={`absolute top-3 right-3 p-2 rounded-full transition-colors ${
+                isInWishlist 
+                  ? 'bg-red-100 text-red-600' 
+                  : 'bg-white/80 text-gray-600 hover:bg-red-100 hover:text-red-600'
+              }`}
+            >
+              <FiHeart className={`w-5 h-5 ${isInWishlist ? 'fill-current' : ''}`} />
+            </button>
+            {product.stock < 10 && (
+              <div className="absolute top-3 left-3 bg-amber-100 text-amber-800 px-2 py-1 rounded-full text-xs font-semibold">
+                Low Stock
+              </div>
+            )}
+          </div>
+          
+          <div className="space-y-3">
+            <div>
+              <h3 className="text-lg font-bold text-gray-900 group-hover:text-emerald-600 transition-colors">
+                {product.name}
+              </h3>
+              <p className="text-sm text-gray-500">{product.category}</p>
+              {product.brand && (
+                <p className="text-xs text-gray-400">Brand: {product.brand}</p>
+              )}
+            </div>
+            
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-2xl font-bold text-emerald-600">₹{product.price.toFixed(2)}</p>
+                <p className="text-sm text-gray-500">per {product.unit}</p>
+              </div>
+              <div className="text-right">
+                <p className="text-sm text-gray-600">Stock: {product.stock}</p>
+                <div className="flex items-center space-x-1 mt-1">
+                  {[...Array(5)].map((_, i) => (
+                    <FiStar key={i} className="w-3 h-3 text-yellow-400 fill-current" />
+                  ))}
+                  <span className="text-xs text-gray-500 ml-1">(4.8)</span>
+                </div>
+              </div>
+            </div>
+            
+            <div className="flex space-x-2">
+              {isInCart ? (
+                <button
+                  onClick={() => setCartOpen(true)}
+                  className="flex-1 bg-emerald-600 text-white py-2 px-4 rounded-xl hover:bg-emerald-700 transition-colors font-semibold flex items-center justify-center space-x-2"
+                >
+                  <FiShoppingCart className="w-4 h-4" />
+                  <span>View Cart</span>
+                </button>
+              ) : (
+                <button
+                  onClick={() => addToCart(product)}
+                  disabled={product.stock === 0}
+                  className="flex-1 bg-emerald-600 text-white py-2 px-4 rounded-xl hover:bg-emerald-700 transition-colors font-semibold disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
+                >
+                  <FiPlus className="w-4 h-4" />
+                  <span>{product.stock === 0 ? 'Out of Stock' : 'Add to Cart'}</span>
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      );
+    };
+
+    return (
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="bg-white rounded-2xl border border-gray-200 p-6">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900">FreshNest Shop</h2>
+              <p className="text-gray-600">Shop fresh products from our warehouse</p>
+            </div>
+            <button
+              onClick={() => setCartOpen(true)}
+              className="relative bg-emerald-600 text-white px-6 py-3 rounded-xl hover:bg-emerald-700 transition-colors font-semibold flex items-center space-x-2"
+            >
+              <FiShoppingCart className="w-5 h-5" />
+              <span>Cart</span>
+              {getCartItemCount() > 0 && (
+                <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-6 h-6 flex items-center justify-center">
+                  {getCartItemCount()}
+                </span>
+              )}
+            </button>
+          </div>
+          
+          {/* Filters */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="relative">
+              <FiSearch className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search products..."
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              />
+            </div>
+            <select
+              value={selectedCategory}
+              onChange={(e) => setSelectedCategory(e.target.value)}
+              className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            >
+              <option value="">All Categories</option>
+              <option value="fruits">Fruits</option>
+              <option value="vegetables">Vegetables</option>
+              <option value="dairy">Dairy</option>
+              <option value="bakery">Bakery</option>
+              <option value="meat">Meat</option>
+              <option value="seafood">Seafood</option>
+            </select>
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            >
+              <option value="name">Sort by Name</option>
+              <option value="price-low">Price: Low to High</option>
+              <option value="price-high">Price: High to Low</option>
+            </select>
+            <div className="flex items-center space-x-2 text-sm text-gray-600">
+              <FiPackage className="w-4 h-4" />
+              <span>{products.length} products found</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Products Grid */}
+        {loading ? (
+          <div className="text-center py-12">
+            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600"></div>
+            <p className="text-gray-500 mt-4">Loading products...</p>
+          </div>
+        ) : products.length === 0 ? (
+          <div className="text-center py-12">
+            <FiPackage className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+            <p className="text-gray-500 text-lg">No products found</p>
+            <p className="text-gray-400 text-sm mt-2">Try adjusting your search or filters</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {products.map((product) => (
+              <ProductCard key={product._id} product={product} />
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  };
 
   // Logout handler
   const handleLogout = async () => {
@@ -217,6 +629,8 @@ const UserDashboard = () => {
 
   const menuItems = [
     { id: 'overview', label: 'Overview', icon: FiHome },
+    { id: 'shop', label: 'Shop Products', icon: FiShoppingBag },
+    { id: 'transactions', label: 'Payment History', icon: FiCreditCard },
     { id: 'inventory', label: 'Inventory View', icon: FiPackage },
     { id: 'reports', label: 'Stock Reports', icon: FiFileText },
     { id: 'insights', label: 'Warehouse Insights', icon: FiBarChart2 },
@@ -266,86 +680,193 @@ const UserDashboard = () => {
     </div>
   );
 
-  const InventoryTable = () => (
-    <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
-      <div className="p-6 border-b border-gray-100">
-        <div className="flex items-center justify-between">
-          <div>
-            <h3 className="text-xl font-bold text-gray-900">Inventory Overview</h3>
-            <p className="text-sm text-gray-500 mt-1">Read-only access to warehouse data</p>
-          </div>
-          <div className="flex items-center space-x-3">
-            <div className="relative">
-              <FiSearch className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
-              <input
-                type="text"
-                placeholder="Search products..."
-                className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm w-64"
-              />
+  const InventoryTable = () => {
+    // Local UI state for search, filters, pagination
+    const [query, setQuery] = useState('');
+    const [category, setCategory] = useState('');
+    const [status, setStatus] = useState('');
+    const [page, setPage] = useState(1);
+    const [limit] = useState(10);
+
+    // Data state
+    const [items, setItems] = useState([]);
+    const [totalPages, setTotalPages] = useState(1);
+    const [loading, setLoading] = useState(false);
+    const [errorMsg, setErrorMsg] = useState('');
+
+    const loadProducts = async () => {
+      try {
+        setLoading(true);
+        setErrorMsg('');
+        const params = { page, limit };
+        if (query) params.search = query;
+        if (category) params.category = category;
+        if (status) params.status = status;
+        // If user lacks admin role, backend public endpoint will still allow read access
+        const res = await productService.publicList(params);
+        // Backend returns { success, data: { items, pagination } }
+        const apiItems = res?.data?.items || [];
+        const pagination = res?.data?.pagination || { pages: 1 };
+        setItems(apiItems);
+        setTotalPages(pagination.pages || 1);
+      } catch (err) {
+        console.error('Load products failed:', err);
+        setErrorMsg('Failed to load products');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    useEffect(() => {
+      loadProducts();
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [page, category, status]);
+
+    const onSearchSubmit = (e) => {
+      e.preventDefault();
+      setPage(1);
+      loadProducts();
+    };
+
+    return (
+      <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+        <div className="p-6 border-b border-gray-100">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-xl font-bold text-gray-900">Inventory Overview</h3>
+              <p className="text-sm text-gray-500 mt-1">Products managed by admin</p>
             </div>
-            <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-              <FiFilter className="w-4 h-4 text-gray-600" />
+            <form onSubmit={onSearchSubmit} className="flex items-center space-x-3">
+              <div className="relative">
+                <FiSearch className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
+                <input
+                  type="text"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="Search by name, SKU, brand..."
+                  className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm w-64"
+                />
+              </div>
+              <select
+                value={category}
+                onChange={(e) => { setCategory(e.target.value); setPage(1); }}
+                className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+              >
+                <option value="">All Categories</option>
+                <option value="fruits">Fruits</option>
+                <option value="vegetables">Vegetables</option>
+                <option value="dairy">Dairy</option>
+              </select>
+              <select
+                value={status}
+                onChange={(e) => { setStatus(e.target.value); setPage(1); }}
+                className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+              >
+                <option value="">All Status</option>
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+              </select>
+              <button type="submit" className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                <FiFilter className="w-4 h-4 text-gray-600" />
+              </button>
+            </form>
+          </div>
+        </div>
+
+        {errorMsg && (
+          <div className="px-6 py-3 bg-red-50 text-red-700 text-sm">{errorMsg}</div>
+        )}
+
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Product</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Category</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Stock</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Supplier</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Price</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Last Updated</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Status</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-200">
+              {loading ? (
+                <tr>
+                  <td colSpan="7" className="px-6 py-10 text-center text-gray-500">Loading products...</td>
+                </tr>
+              ) : items.length === 0 ? (
+                <tr>
+                  <td colSpan="7" className="px-6 py-10 text-center text-gray-500">No products found</td>
+                </tr>
+              ) : (
+                items.map((p) => (
+                  <tr key={p._id} className="hover:bg-gray-50 transition-colors">
+                    <td className="px-6 py-4">
+                      <div className="flex items-center">
+                        <div className="w-10 h-10 bg-emerald-100 rounded-lg flex items-center justify-center mr-3">
+                          <FiPackage className="w-5 h-5 text-emerald-600" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-semibold text-gray-900">{p.name}</p>
+                          <p className="text-xs text-gray-500">SKU: {p.sku}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className="text-sm text-gray-600">{p.category}</span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className="text-sm font-semibold text-gray-900">{p.stock} {p.unit || 'unit'}</span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className="text-sm text-gray-600">{p.supplierName || '-'}</span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className="text-sm font-semibold text-gray-900">${p.price?.toFixed ? p.price.toFixed(2) : p.price}</span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className="text-sm text-gray-500">{new Date(p.updatedAt || p.createdAt).toLocaleDateString()}</span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full ${
+                        (p.status || 'active') === 'active' 
+                          ? 'bg-emerald-100 text-emerald-700' 
+                          : 'bg-amber-100 text-amber-700'
+                      }`}>
+                        {(p.status || 'active')}
+                      </span>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Pagination */}
+        <div className="flex items-center justify-between px-6 py-4 border-t border-gray-100 text-sm">
+          <span className="text-gray-500">Page {page} of {totalPages}</span>
+          <div className="space-x-2">
+            <button
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page <= 1}
+              className={`px-3 py-1.5 rounded-lg border ${page <= 1 ? 'text-gray-400 bg-gray-50' : 'hover:bg-gray-50'}`}
+            >
+              Previous
+            </button>
+            <button
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={page >= totalPages}
+              className={`px-3 py-1.5 rounded-lg border ${page >= totalPages ? 'text-gray-400 bg-gray-50' : 'hover:bg-gray-50'}`}
+            >
+              Next
             </button>
           </div>
         </div>
       </div>
-      <div className="overflow-x-auto">
-        <table className="w-full">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Product</th>
-              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Category</th>
-              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Stock</th>
-              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Supplier</th>
-              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Price</th>
-              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Last Updated</th>
-              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Status</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-200">
-            {inventoryData.map((item) => (
-              <tr key={item.id} className="hover:bg-gray-50 transition-colors">
-                <td className="px-6 py-4">
-                  <div className="flex items-center">
-                    <div className="w-10 h-10 bg-emerald-100 rounded-lg flex items-center justify-center mr-3">
-                      <FiPackage className="w-5 h-5 text-emerald-600" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold text-gray-900">{item.name}</p>
-                    </div>
-                  </div>
-                </td>
-                <td className="px-6 py-4">
-                  <span className="text-sm text-gray-600">{item.category}</span>
-                </td>
-                <td className="px-6 py-4">
-                  <span className="text-sm font-semibold text-gray-900">{item.stock} units</span>
-                </td>
-                <td className="px-6 py-4">
-                  <span className="text-sm text-gray-600">{item.supplier}</span>
-                </td>
-                <td className="px-6 py-4">
-                  <span className="text-sm font-semibold text-gray-900">{item.price}</span>
-                </td>
-                <td className="px-6 py-4">
-                  <span className="text-sm text-gray-500">{item.lastUpdated}</span>
-                </td>
-                <td className="px-6 py-4">
-                  <span className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full ${
-                    item.status === 'In Stock' 
-                      ? 'bg-emerald-100 text-emerald-700' 
-                      : 'bg-amber-100 text-amber-700'
-                  }`}>
-                    {item.status}
-                  </span>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <div className="flex h-screen bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50">
@@ -386,7 +907,7 @@ const UserDashboard = () => {
               </div>
               <div className="bg-emerald-500/20 rounded-lg p-2">
                 <p className="text-xs text-emerald-100 font-medium">
-                  You have read-only access to warehouse data
+                  Enjoy your personalized dashboard experience
                 </p>
               </div>
             </div>
@@ -452,6 +973,17 @@ const UserDashboard = () => {
             </div>
             
             <div className="flex items-center space-x-4">
+              <button
+                onClick={() => setCartOpen(true)}
+                className="relative p-3 hover:bg-gray-100 rounded-2xl transition-all duration-200 border border-gray-200"
+              >
+                <FiShoppingCart className="w-6 h-6 text-gray-600" />
+                {getCartItemCount() > 0 && (
+                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-emerald-500 rounded-full text-xs text-white flex items-center justify-center font-semibold">
+                    {getCartItemCount()}
+                  </span>
+                )}
+              </button>
               <div className="relative">
                 <FiBell className="w-6 h-6 text-gray-600" />
                 <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full text-xs text-white flex items-center justify-center">
@@ -464,7 +996,7 @@ const UserDashboard = () => {
                 </div>
                 <div className="hidden md:block">
                   <p className="text-sm font-bold text-gray-900">User Access</p>
-                  <p className="text-xs text-gray-500">Read Only</p>
+                  <p className="text-xs text-gray-500">Standard</p>
                 </div>
               </div>
             </div>
@@ -544,40 +1076,56 @@ const UserDashboard = () => {
                   <h3 className="text-xl font-bold text-gray-900 mb-4">Quick Actions</h3>
                   <div className="grid grid-cols-2 gap-4">
                     <button 
-                      onClick={() => setActiveSection('inventory')}
+                      onClick={() => setActiveSection('shop')}
                       className="p-4 bg-emerald-50 hover:bg-emerald-100 rounded-xl transition-colors text-left"
                     >
-                      <FiEye className="w-6 h-6 text-emerald-600 mb-2" />
+                      <FiShoppingBag className="w-6 h-6 text-emerald-600 mb-2" />
+                      <p className="font-semibold text-gray-900">Shop Products</p>
+                      <p className="text-xs text-gray-500">Buy from warehouse</p>
+                    </button>
+                    <button 
+                      onClick={() => setActiveSection('inventory')}
+                      className="p-4 bg-blue-50 hover:bg-blue-100 rounded-xl transition-colors text-left"
+                    >
+                      <FiEye className="w-6 h-6 text-blue-600 mb-2" />
                       <p className="font-semibold text-gray-900">View Inventory</p>
                       <p className="text-xs text-gray-500">Browse all products</p>
                     </button>
                     <button 
                       onClick={() => setActiveSection('reports')}
-                      className="p-4 bg-blue-50 hover:bg-blue-100 rounded-xl transition-colors text-left"
+                      className="p-4 bg-purple-50 hover:bg-purple-100 rounded-xl transition-colors text-left"
                     >
-                      <FiDownload className="w-6 h-6 text-blue-600 mb-2" />
+                      <FiDownload className="w-6 h-6 text-purple-600 mb-2" />
                       <p className="font-semibold text-gray-900">Download Reports</p>
                       <p className="text-xs text-gray-500">Get stock summaries</p>
                     </button>
                     <button 
-                      onClick={() => setActiveSection('insights')}
+                      onClick={() => setActiveSection('transactions')}
                       className="p-4 bg-purple-50 hover:bg-purple-100 rounded-xl transition-colors text-left"
                     >
-                      <FiBarChart2 className="w-6 h-6 text-purple-600 mb-2" />
-                      <p className="font-semibold text-gray-900">View Insights</p>
-                      <p className="text-xs text-gray-500">Analytics & trends</p>
+                      <FiCreditCard className="w-6 h-6 text-purple-600 mb-2" />
+                      <p className="font-semibold text-gray-900">Payment History</p>
+                      <p className="text-xs text-gray-500">View all transactions</p>
                     </button>
                     <button 
-                      onClick={() => setActiveSection('notifications')}
+                      onClick={() => setActiveSection('insights')}
                       className="p-4 bg-amber-50 hover:bg-amber-100 rounded-xl transition-colors text-left"
                     >
-                      <FiBell className="w-6 h-6 text-amber-600 mb-2" />
-                      <p className="font-semibold text-gray-900">Notifications</p>
-                      <p className="text-xs text-gray-500">View all alerts</p>
+                      <FiBarChart2 className="w-6 h-6 text-amber-600 mb-2" />
+                      <p className="font-semibold text-gray-900">View Insights</p>
+                      <p className="text-xs text-gray-500">Analytics & trends</p>
                     </button>
                   </div>
                 </div>
               </div>
+            </div>
+          )}
+
+          {activeSection === 'shop' && <Shop />}
+
+          {activeSection === 'transactions' && (
+            <div className="space-y-6">
+              <TransactionDashboard />
             </div>
           )}
 
@@ -728,11 +1276,11 @@ const UserDashboard = () => {
                     </div>
                     <div className="border border-gray-200 rounded-xl p-4">
                       <label className="text-sm font-semibold text-gray-600 uppercase tracking-wide">Role</label>
-                      <p className="text-lg font-medium text-gray-900 mt-1">User (Read-Only)</p>
+                      <p className="text-lg font-medium text-gray-900 mt-1">User</p>
                     </div>
                     <div className="border border-gray-200 rounded-xl p-4">
                       <label className="text-sm font-semibold text-gray-600 uppercase tracking-wide">Access Level</label>
-                      <p className="text-lg font-medium text-gray-900 mt-1">Warehouse Data Viewer</p>
+                      <p className="text-lg font-medium text-gray-900 mt-1">Standard</p>
                     </div>
                     <div className="border border-gray-200 rounded-xl p-4">
                       <label className="text-sm font-semibold text-gray-600 uppercase tracking-wide">Last Login</label>
@@ -740,7 +1288,7 @@ const UserDashboard = () => {
                     </div>
                   </div>
                   <div className="text-center pt-6">
-                    <button className="bg-red-600 text-white px-8 py-3 rounded-xl hover:bg-red-700 transition-colors font-semibold">
+                    <button onClick={handleLogout} className="bg-red-600 text-white px-8 py-3 rounded-xl hover:bg-red-700 transition-colors font-semibold">
                       Sign Out
                     </button>
                   </div>
@@ -750,6 +1298,25 @@ const UserDashboard = () => {
           )}
         </main>
       </div>
+      
+      {/* Shopping Cart */}
+      <ShoppingCart />
+      
+      {/* Razorpay Style Payment Gateway */}
+      <RazorpayStyleGateway
+        isOpen={processingPayment}
+        onClose={() => setProcessingPayment(false)}
+        orderData={getOrderData()}
+        totalAmount={getCartTotal()}
+        customerInfo={{
+          name: 'John Doe',
+          email: userEmail,
+          phone: '+91 98765 43210',
+          address: '123 Main St, City, State 12345'
+        }}
+        onSuccess={handlePaymentSuccess}
+        onError={handlePaymentError}
+      />
     </div>
   );
 };
