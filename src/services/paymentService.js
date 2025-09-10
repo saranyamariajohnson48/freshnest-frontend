@@ -98,11 +98,37 @@ class PaymentService {
               order_id: order.data.id
             });
 
-            if (verification.success) {
-              onSuccess(response, verification);
-            } else {
+            if (!verification.success) {
               onError(new Error('Payment verification failed'));
+              return;
             }
+
+            // Persist the transaction so it appears in Purchase History
+            try {
+              await this.saveTransaction({
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_signature: response.razorpay_signature,
+                customer: {
+                  name: orderData.customer?.name,
+                  email: orderData.customer?.email,
+                  phone: orderData.customer?.phone
+                },
+                order: {
+                  ...orderData,
+                  id: order.data.id,
+                  amount: order.data.amount / 100,
+                  currency: order.data.currency
+                },
+                paymentMethod: 'razorpay',
+                status: 'completed'
+              });
+            } catch (saveError) {
+              // Do not fail the UX if saving fails; log and proceed
+              console.error('Save transaction after verification failed:', saveError);
+            }
+
+            onSuccess(response, verification);
           } catch (error) {
             onError(error);
           }

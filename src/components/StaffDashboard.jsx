@@ -93,6 +93,32 @@ const StaffDashboard = () => {
     currentMonth: null,
     recentSlips: []
   });
+
+  // Function to get appropriate padding for different sections
+  const getMainPadding = () => {
+    switch (activeSection) {
+      case 'dashboard':
+        return 'p-6 pr-[22rem]'; // Full padding for dashboard with cards
+      case 'jobcard':
+        return 'p-4 pr-[60rem]'; // Slightly less padding for job card
+      case 'tasks':
+        return 'p-4 pr-[35rem]'; // Less padding for task management
+      case 'leave':
+        return 'p-4 pr-[24rem]'; // Less padding for leave management
+      case 'messages':
+        return 'p-2 pr-[60rem]'; // Minimal padding for messages
+      case 'attendance':
+        return 'p-4 pr-[73rem]'; // Standard padding for attendance
+      case 'salary':
+        return 'p-4 pr-[73rem]'; // Standard padding for salary
+      case 'profile':
+        return 'p-4 pr-[73rem]'; // Standard padding for profile
+      case 'notifications':
+        return 'p-2 pr-[74rem]'; // Minimal padding for notifications
+      default:
+        return 'p-6 pr-[22rem]'; // Default padding
+    }
+  };
   
   const [notifications, setNotifications] = useState([]);
   const [stockActivity, setStockActivity] = useState([]);
@@ -729,7 +755,7 @@ const StaffDashboard = () => {
         </header>
 
         {/* Dashboard Content */}
-        <main className="p-6 pr-[20rem]">
+        <main className={`${getMainPadding()}`}>
           {activeSection === 'dashboard' && (
             <div className="space-y-6">
               {/* Welcome Section */}

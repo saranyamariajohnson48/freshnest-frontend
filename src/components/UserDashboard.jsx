@@ -5,6 +5,7 @@ import authService from '../services/authService';
 import productService from '../services/productService';
 import paymentService from '../services/paymentService';
 import RazorpayStyleGateway from './RazorpayStyleGateway';
+import PurchaseHistory from './PurchaseHistory';
 import TransactionDashboard from './TransactionDashboard';
 import { useToastContext } from '../contexts/ToastContext';
 import { 
@@ -153,6 +154,9 @@ const UserDashboard = () => {
       // Trigger a refresh of the transaction dashboard
       window.dispatchEvent(new CustomEvent('refreshTransactions'));
     }
+
+    // Navigate to purchases so user can see bought items
+    setActiveSection('purchases');
   };
 
   const handlePaymentError = (error) => {
@@ -630,6 +634,7 @@ const UserDashboard = () => {
   const menuItems = [
     { id: 'overview', label: 'Overview', icon: FiHome },
     { id: 'shop', label: 'Shop Products', icon: FiShoppingBag },
+    { id: 'purchases', label: 'My Purchases', icon: FiShoppingCart },
     { id: 'transactions', label: 'Payment History', icon: FiCreditCard },
     { id: 'inventory', label: 'Inventory View', icon: FiPackage },
     { id: 'reports', label: 'Stock Reports', icon: FiFileText },
@@ -1122,6 +1127,12 @@ const UserDashboard = () => {
           )}
 
           {activeSection === 'shop' && <Shop />}
+
+          {activeSection === 'purchases' && (
+            <div className="space-y-6">
+              <PurchaseHistory />
+            </div>
+          )}
 
           {activeSection === 'transactions' && (
             <div className="space-y-6">

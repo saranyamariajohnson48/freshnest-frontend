@@ -65,23 +65,32 @@ const Login = () => {
       });
       
       const data = await authService.login(form);
+      
+      // Try to fetch authoritative profile using stored token; fallback to login data
+      let profile = null;
+      try {
+        profile = await authService.getProfile();
+      } catch (e) {
+        console.warn('Profile fetch failed, falling back to login response user:', e);
+        profile = data?.user || null;
+      }
       setLoading(false);
       
-      if (!data || !data.user) {
-        throw new Error("Invalid response from server");
+      if (!profile) {
+        throw new Error("Failed to get user details after login");
       }
       
       console.log("Login successful:", data);
-      console.log("User role:", data.user?.role);
+      console.log("Resolved role:", profile?.role);
       
       // Show success toast
-      success(`Welcome back, ${data.user?.fullName || data.user?.email}! 🎉`, {
+      success(`Welcome back, ${profile?.fullName || profile?.email}! 🎉`, {
         duration: 3000
       });
       
       // Redirect based on user role
       setTimeout(() => {
-        if (data.user && (data.user.role === 'admin' || data.user.role === 'Admin')) {
+        if (profile && (profile.role === 'admin' || profile.role === 'Admin')) {
           console.log("Redirecting to admin dashboard...");
           navigate("/admin/dashboard");
           setTimeout(() => {
@@ -89,7 +98,7 @@ const Login = () => {
               window.location.href = "/admin/dashboard";
             }
           }, 500);
-        } else if (data.user && (data.user.role === 'retailer' || data.user.role === 'Retailer')) {
+        } else if (profile && (profile.role === 'retailer' || profile.role === 'Retailer')) {
           console.log("Redirecting to retailer dashboard...");
           navigate("/retailer/dashboard");
           setTimeout(() => {
@@ -97,7 +106,7 @@ const Login = () => {
               window.location.href = "/retailer/dashboard";
             }
           }, 500);
-        } else if (data.user && (data.user.role === 'staff' || data.user.role === 'Staff')) {
+        } else if (profile && (profile.role === 'staff' || profile.role === 'Staff')) {
           console.log("Redirecting to staff dashboard...");
           navigate("/staff/dashboard");
           setTimeout(() => {
@@ -105,7 +114,7 @@ const Login = () => {
               window.location.href = "/staff/dashboard";
             }
           }, 500);
-        } else if (data.user && (data.user.role === 'supplier' || data.user.role === 'Supplier')) {
+        } else if (profile && (profile.role === 'supplier' || profile.role === 'Supplier')) {
           console.log("Redirecting to supplier dashboard...");
           navigate("/supplier/dashboard");
           setTimeout(() => {
@@ -113,7 +122,7 @@ const Login = () => {
               window.location.href = "/supplier/dashboard";
             }
           }, 500);
-        } else if (data.user && (data.user.role === 'user' || data.user.role === 'User')) {
+        } else if (profile && (profile.role === 'user' || profile.role === 'User')) {
           console.log("Redirecting to user dashboard...");
           navigate("/user/dashboard");
           setTimeout(() => {

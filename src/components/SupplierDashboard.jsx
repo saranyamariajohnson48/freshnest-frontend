@@ -54,6 +54,26 @@ const SupplierDashboard = () => {
     rating: 0
   });
 
+  // Function to get appropriate padding for different sections
+  const getMainPadding = () => {
+    switch (activeSection) {
+      case 'overview':
+        return 'col-span-12 lg:col-span-9 space-y-6 pr-[1rem] pl-[1rem]'; // Full padding for overview
+      case 'orders':
+        return 'col-span-12 lg:col-span-9 space-y-6 pr-[2rem] pl-[1rem]'; // Reduced padding for orders
+      case 'deliveries':
+        return 'col-span-12 lg:col-span-9 space-y-6 pr-[2rem] pl-[1rem]'; // Reduced padding for deliveries
+      case 'messages':
+        return 'col-span-12 lg:col-span-9 space-y-6 pr-[2rem] pl-[1rem]'; // Reduced padding for messages
+      case 'performance':
+        return 'col-span-12 lg:col-span-9 space-y-6 pr-[2rem] pl-[1rem]'; // Reduced padding for performance
+      case 'profile':
+        return 'col-span-12 lg:col-span-9 space-y-6 pr-[2rem] pl-[1rem]'; // Reduced padding for profile
+      default:
+        return 'col-span-12 lg:col-span-9 space-y-6 pr-[2rem] pl-[1rem]'; // Default padding
+    }
+  };
+
   useEffect(() => {
     const init = async () => {
       try {
@@ -161,7 +181,7 @@ const SupplierDashboard = () => {
     <div className="min-h-screen bg-slate-50">
       {/* Top bar */}
       <header className="bg-white border-b border-slate-200 sticky top-0 z-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
+        <div className="w-full px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <button className="lg:hidden p-2 rounded-lg hover:bg-slate-100" onClick={() => setSidebarOpen(!sidebarOpen)}>
               {sidebarOpen ? <FiX className="w-5 h-5"/> : <FiMenu className="w-5 h-5"/>}
@@ -194,7 +214,7 @@ const SupplierDashboard = () => {
       </header>
 
       {/* Layout */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 grid grid-cols-12 gap-6">
+      <div className="w-full px-4 sm:px-6 lg:px-8 py-6 grid grid-cols-12 gap-6">
         {/* Sidebar */}
         <aside className={`col-span-12 lg:col-span-3 ${sidebarOpen ? '' : 'hidden lg:block'}`}>
           <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
@@ -239,7 +259,7 @@ const SupplierDashboard = () => {
         </aside>
 
         {/* Main */}
-        <main className="col-span-12 lg:col-span-9 space-y-6">
+        <main className={`${getMainPadding()}`}>
           {/* Overview cards */}
           {activeSection === 'overview' && (
             <>

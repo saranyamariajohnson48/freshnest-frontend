@@ -1350,7 +1350,7 @@ const AdminDashboard = () => {
 
           {/* Sales Section */}
           {activeSection === 'sales' && (
-            <div className="space-y-6 lg:space-y-8 pr-[10rem] pl-[10rem]">
+            <div className="space-y-6 lg:space-y-8 pr-[20rem] pl-[10rem]">
               <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                 <div>
                   <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">Sales Management</h1>
@@ -1826,7 +1826,7 @@ const AdminDashboard = () => {
 
           {/* Orders Section */}
           {activeSection === 'orders' && (
-            <div className="space-y-6 lg:space-y-8 pr-[10rem] pl-[10rem]">
+            <div className="space-y-6 lg:space-y-8 pr-[35rem] pl-[10rem]">
               <React.Suspense fallback={<div className="p-6">Loading orders...</div>}>
                 <AdminOrdersLazy />
               </React.Suspense>
@@ -1872,7 +1872,7 @@ const AdminDashboard = () => {
 
           {/* Staff Section */}
           {activeSection === 'staff' && (
-            <div className="space-y-6 lg:space-y-8 pr-[10rem] pl-[10rem]">
+            <div className="space-y-6 lg:space-y-8 pr-[0rem] pl-[1rem]">
               <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                 <div>
                   <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">Staff Management</h1>
@@ -2009,7 +2009,7 @@ const AdminDashboard = () => {
 
           {/* Leave Management Section */}
           {activeSection === 'leave-management' && (
-            <div className="space-y-6 lg:space-y-8">
+            <div className="space-y-6 lg:space-y-8 pr-[10rem] pl-[1rem]">
               <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                 <div>
                   <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">Leave Management</h1>

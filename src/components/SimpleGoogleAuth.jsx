@@ -11,6 +11,7 @@ const SimpleGoogleAuth = () => {
             mode="modal"
             afterSignInUrl="/"
             afterSignUpUrl="/"
+            asChild
           >
             <button className="w-full py-3 px-4 border border-white/20 rounded-2xl bg-white/10 text-white font-medium hover:bg-white/20 transition-all duration-300 flex items-center justify-center space-x-3 backdrop-blur-sm">
               <svg className="w-5 h-5" viewBox="0 0 24 24">
@@ -28,6 +29,7 @@ const SimpleGoogleAuth = () => {
             mode="modal"
             afterSignInUrl="/"
             afterSignUpUrl="/"
+            asChild
           >
             <button className="w-full py-2 px-4 border border-white/10 rounded-xl bg-white/5 text-white/70 font-medium hover:bg-white/10 transition-all duration-300 flex items-center justify-center space-x-2 backdrop-blur-sm text-sm">
               <span>New user? Sign up with Google</span>
