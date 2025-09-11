@@ -36,6 +36,7 @@ import TokenDebug from './components/TokenDebug';
 import StaffDashboard from './components/StaffDashboard';
 import SupplierDashboard from './components/SupplierDashboard';
 import ProductSelector from './components/ProductSelector';
+import SupplierOnboardingPublic from './components/SupplierOnboardingPublic';
 
 function Home() {
   return (
@@ -76,6 +77,7 @@ export default function App() {
           <Route path="/test-staff-api" element={<TestStaffAPI />} />
           <Route path="/token-debug" element={<TokenDebug />} />
           <Route path="/products/select" element={<ProductSelector />} />
+          <Route path="/supplier-onboarding" element={<SupplierOnboardingPublic />} />
           
           {/* JWT Protected Routes */}
           <Route path="/dashboard" element={

@@ -637,6 +637,22 @@ class SupplierService {
     }
   }
 
+  // Send onboarding email (styled HTML from backend)
+  async sendOnboardingEmail({ supplierId, email, supplierName }) {
+    const payload = {};
+    if (email) payload.email = email;
+    if (supplierName) payload.supplierName = supplierName;
+    const response = await this.apiRequest(`${API_BASE_URL}/api/users/${supplierId}/send-onboarding-email`, {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error || 'Failed to send onboarding email');
+    }
+    return data;
+  }
+
   // Export suppliers data
   async exportSuppliers(format = 'json') {
     if (this.useBackend) {

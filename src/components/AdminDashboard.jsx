@@ -53,6 +53,7 @@ import {
   FiEye,
   FiSend
 } from 'react-icons/fi';
+import supplierService from '../services/supplierService';
 import { Line, Bar, Doughnut } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
@@ -94,6 +95,8 @@ const AdminDashboard = () => {
   // Supplier states
   const [showAddSupplierForm, setShowAddSupplierForm] = useState(false);
   const [supplierRefreshTrigger, setSupplierRefreshTrigger] = useState(0);
+  const [showSupplierOnboarding, setShowSupplierOnboarding] = useState(false);
+  const [supplierOnboardingRecipient, setSupplierOnboardingRecipient] = useState('');
   
 
   
@@ -302,6 +305,76 @@ const AdminDashboard = () => {
   // Supplier management handlers
   const handleAddSupplier = () => {
     setShowAddSupplierForm(true);
+  };
+
+  const handleSupplierOnboardingEmail = () => {
+    setShowSupplierOnboarding(true);
+  };
+
+  const getSupplierOnboardingSubject = () => 'Supplier Onboarding – Document Submission Request';
+
+  const getSupplierOnboardingBody = () => [
+    'Hello,',
+    '',
+    'We are initiating your onboarding as a supplier with FreshNest. Please reply to this email with the following digital documents/details:',
+    '',
+    '1) Business Registration/License Number',
+    '2) GST/Tax Identification Number',
+    '3) Bank Details (Account name, number, IFSC/SWIFT)',
+    '4) Product Catalog (PDF/Sheet) and Pricing List',
+    '5) Quality Certifications (if any): ISO/HACCP/etc.',
+    '6) Delivery Terms & Lead Times',
+    '7) Primary Contact Details (Name, Email, Phone, Address)',
+    '',
+    'Optional: Any existing references or client list',
+    '',
+    'Thank you,',
+    'FreshNest Procurement Team'
+  ].join('\n');
+
+  const getSupplierOnboardingCoreItems = () => ([
+    'Business Registration/License Number',
+    'GST/Tax Identification Number',
+    'Bank Details (Account name, number, IFSC/SWIFT)',
+    'Product Catalog and Pricing List',
+    'Quality Certifications (ISO/HACCP/etc.)',
+    'Delivery Terms & Lead Times',
+    'Primary Contact Details (Name, Email, Phone, Address)'
+  ]);
+
+  const openGmailCompose = () => {
+    const subject = encodeURIComponent(getSupplierOnboardingSubject());
+    const body = encodeURIComponent(getSupplierOnboardingBody());
+    // Open Gmail with FreshNest account if logged in, leave "To" blank so you can type
+    const url = `https://mail.google.com/mail/?view=cm&fs=1&tf=cm&su=${subject}&body=${body}&authuser=freshnestproject@gmail.com`;
+    window.open(url, '_blank');
+  };
+
+  const openDefaultMailClient = () => {
+    const subject = getSupplierOnboardingSubject();
+    const body = getSupplierOnboardingBody();
+    const recipient = supplierOnboardingRecipient.trim();
+    const toPart = recipient ? recipient : '';
+    const mailto = `mailto:${toPart}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    window.location.href = mailto;
+  };
+
+  const [sendingOnboarding, setSendingOnboarding] = useState(false);
+  const sendOnboardingFromBackend = async () => {
+    try {
+      setSendingOnboarding(true);
+      await supplierService.sendOnboardingEmail({
+        supplierId: 'new',
+        email: supplierOnboardingRecipient || undefined,
+        supplierName: 'Supplier'
+      });
+      toastInfo && toastInfo('Onboarding email sent');
+      setShowSupplierOnboarding(false);
+    } catch (e) {
+      toastInfo && toastInfo(e.message || 'Failed to send');
+    } finally {
+      setSendingOnboarding(false);
+    }
   };
 
   const handleSupplierFormClose = () => {
@@ -1826,7 +1899,7 @@ const AdminDashboard = () => {
 
           {/* Orders Section */}
           {activeSection === 'orders' && (
-            <div className="space-y-6 lg:space-y-8 pr-[35rem] pl-[10rem]">
+            <div className="space-y-6 lg:space-y-8 pr-[1rem] pl-[1rem]">
               <React.Suspense fallback={<div className="p-6">Loading orders...</div>}>
                 <AdminOrdersLazy />
               </React.Suspense>
@@ -1851,6 +1924,14 @@ const AdminDashboard = () => {
                     <span className="hidden sm:inline">Add Supplier</span>
                     <span className="sm:hidden">Add</span>
                   </button>
+                  <button
+                    onClick={handleSupplierOnboardingEmail}
+                    className="bg-blue-600 text-white px-3 lg:px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm lg:text-base flex items-center space-x-2"
+                  >
+                    <FiSend className="w-4 h-4" />
+                    <span className="hidden sm:inline">Supplier Onboarding Form</span>
+                    <span className="sm:hidden">Onboard</span>
+                  </button>
                 </div>
               </div>
               
@@ -1858,6 +1939,92 @@ const AdminDashboard = () => {
                 onAddSupplier={handleAddSupplier}
                 refreshTrigger={supplierRefreshTrigger}
               />
+              {showSupplierOnboarding && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                  <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+                    <div className="flex items-center justify-between p-6 border-b border-gray-200">
+                      <div>
+                        <h2 className="text-2xl font-bold text-gray-900">Supplier Onboarding Email</h2>
+                        <p className="text-gray-600 mt-1">Preview and choose how to send.</p>
+                      </div>
+                      <button
+                        onClick={() => setShowSupplierOnboarding(false)}
+                        className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                      >
+                        <FiX className="w-6 h-6 text-gray-500" />
+                      </button>
+                    </div>
+                    <div className="p-6 space-y-4">
+                      <div className="border border-amber-200 bg-amber-50 rounded-xl p-4">
+                        <h3 className="text-base font-semibold text-amber-900 mb-2">Core Preview</h3>
+                        <div className="mb-2">
+                          <span className="text-xs uppercase text-amber-700">Subject</span>
+                          <div className="mt-1 text-sm font-medium text-amber-900">{getSupplierOnboardingSubject()}</div>
+                        </div>
+                        <div>
+                          <span className="text-xs uppercase text-amber-700">Key Request Items</span>
+                          <ul className="mt-1 list-disc list-inside text-sm text-amber-900 space-y-1">
+                            {getSupplierOnboardingCoreItems().map((item) => (
+                              <li key={item}>{item}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">To (enter supplier email)</label>
+                        <input
+                          type="email"
+                          value={supplierOnboardingRecipient}
+                          onChange={(e) => setSupplierOnboardingRecipient(e.target.value)}
+                          placeholder="supplier@example.com"
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
+                        />
+                        <p className="text-xs text-gray-500 mt-1">Gmail will open with the FreshNest account. You can type or adjust the recipient there.</p>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Subject</label>
+                        <div className="px-4 py-3 border rounded-lg bg-emerald-50 border-emerald-200 text-emerald-900 font-medium">{getSupplierOnboardingSubject()}</div>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Body</label>
+                        <pre className="px-4 py-3 border rounded-lg bg-emerald-50 border-emerald-200 text-emerald-900 whitespace-pre-wrap text-sm leading-6">{getSupplierOnboardingBody()}</pre>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-end space-x-3 p-6 border-t border-gray-200">
+                      <button
+                        onClick={() => setShowSupplierOnboarding(false)}
+                        className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                      >
+                        Close
+                      </button>
+                      <button
+                        onClick={openDefaultMailClient}
+                        className="px-6 py-3 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors flex items-center space-x-2"
+                      >
+                        <FiSend className="w-4 h-4" />
+                        <span>Send via Mail App</span>
+                      </button>
+                      <button
+                        onClick={sendOnboardingFromBackend}
+                        disabled={sendingOnboarding}
+                        className="px-6 py-3 bg-emerald-700 text-white rounded-lg hover:bg-emerald-800 transition-colors flex items-center space-x-2 disabled:opacity-60"
+                      >
+                        <FiSend className="w-4 h-4" />
+                        <span>{sendingOnboarding ? 'Sending…' : 'Send Styled Email'}</span>
+                      </button>
+                      <a
+                        href={`https://mail.google.com/mail/?view=cm&fs=1&tf=cm&su=${encodeURIComponent(getSupplierOnboardingSubject())}&body=${encodeURIComponent(getSupplierOnboardingBody())}&authuser=freshnestproject@gmail.com`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2"
+                      >
+                        <FiSend className="w-4 h-4" />
+                        <span>Open in Gmail</span>
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
