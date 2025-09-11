@@ -16,6 +16,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>FreshNest - Warehouse Management</title>
     <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+    <script>
+      (function() {
+        var params = new URLSearchParams(window.location.search);
+        var p = params.get('p');
+        if (p) {
+          var newUrl = '/freshnest-frontend' + decodeURIComponent(p);
+          window.history.replaceState(null, '', newUrl);
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
