@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Redirecting…</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script>
+      // Single Page Apps for GitHub Pages
+      // https://github.com/rafgraph/spa-github-pages
+      (function(l) {
+        var repoBase = '/freshnest-frontend';
+        var path = l.pathname;
+        // If the path already starts with the repo base, strip it for encoding
+        if (path.startsWith(repoBase)) {
+          path = path.slice(repoBase.length);
+          if (!path.startsWith('/')) path = '/' + path;
+        }
+        var search = l.search ? l.search : '';
+        var hash = l.hash ? l.hash : '';
+        var url = repoBase + '/?p=' + encodeURIComponent(path + search + hash);
+        l.replace(url);
+      })(window.location);
+    </script>
+    <noscript>
+      <meta http-equiv="refresh" content="0; url=/freshnest-frontend/" />
+    </noscript>
+  </head>
+  <body></body>
+</html>
