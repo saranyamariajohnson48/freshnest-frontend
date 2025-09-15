@@ -122,6 +122,32 @@ const SupplierDashboard = () => {
     return () => tokenManager.stopAutoRefresh();
   }, [authUser, navigate, error, supplier?.supplierDetails?.rating]);
 
+  // Low-stock notifier: fetch own products with stock <= 5 and show an alert banner
+  useEffect(() => {
+    let cancelled = false;
+    const fetchLowStock = async () => {
+      try {
+        if (!authUser || (authUser.role !== 'supplier' && authUser.role !== 'Supplier')) return;
+        const productService = (await import('../services/productService')).default;
+        const res = await productService.publicList({ page: 1, limit: 50, lowStock: 5, my: true });
+        const items = res?.data?.items || [];
+        if (!cancelled && items.length > 0) {
+          // Show a prominent, one-time info toast
+          const names = items.slice(0, 5).map(p => p.name).join(', ');
+          const more = items.length > 5 ? ` and ${items.length - 5} more` : '';
+          const msg = `Low stock alert: ${items.length} item(s) need restock (e.g., ${names}${more}).`;
+          // Use success/info channel to stand out; could be custom UI banner too
+          try { info(msg, { duration: 6000 }); } catch { console.log(msg); }
+        }
+      } catch (e) {
+        // non-blocking
+      }
+    };
+    fetchLowStock();
+    const id = setInterval(fetchLowStock, 60 * 1000); // poll every 60s
+    return () => { cancelled = true; clearInterval(id); };
+  }, [authUser, info]);
+
   // Poll chat for unread badge and toast on new incoming messages
   useEffect(() => {
     let mounted = true;
@@ -158,9 +184,9 @@ const SupplierDashboard = () => {
       tokenManager.stopAutoRefresh();
       try { await authLogout(); } catch {}
       try { await signOut(); } catch {}
-      window.location.href = '/login';
+      window.location.replace('/freshnest-frontend/login');
     } catch (e) {
-      window.location.href = '/login';
+      window.location.replace('/freshnest-frontend/login');
     }
   };
 

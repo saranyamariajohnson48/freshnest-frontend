@@ -413,7 +413,7 @@ const StaffDashboard = () => {
       
       // Force redirect immediately
       console.log('🔴 Redirecting to login...');
-      window.location.href = '/login';
+      window.location.replace('/freshnest-frontend/login');
       
     } catch (error) {
       console.error('🔴 Logout error:', error);
@@ -424,7 +424,7 @@ const StaffDashboard = () => {
       tokenManager.stopAutoRefresh();
       
       // Force redirect
-      window.location.href = '/login';
+      window.location.replace('/freshnest-frontend/login');
     }
   };
 
@@ -453,7 +453,7 @@ const StaffDashboard = () => {
     
     // Force redirect immediately
     setTimeout(() => {
-      window.location.href = '/login';
+      window.location.replace('/freshnest-frontend/login');
     }, 500);
   };
 

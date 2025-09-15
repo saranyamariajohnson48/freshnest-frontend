@@ -360,8 +360,10 @@ function InventoryManager() {
                   <tr className="border-b">
                     <th className="text-left py-3 px-4 font-medium text-gray-600">Name</th>
                     <th className="text-left py-3 px-4 font-medium text-gray-600">Brand</th>
-                    <th className="text-left py-3 px-4 font-medium text-gray-600">Price per unit</th>
+                    <th className="text-left py-3 px-4 font-medium text-gray-600">Price</th>
                     <th className="text-left py-3 px-4 font-medium text-gray-600">Unit</th>
+                    <th className="text-left py-3 px-4 font-medium text-gray-600">Available Stock</th>
+                    <th className="text-left py-3 px-4 font-medium text-gray-600">Supplier</th>
                     <th className="text-left py-3 px-4 font-medium text-gray-600">Status</th>
                     <th className="text-left py-3 px-4 font-medium text-gray-600">Action</th>
                   </tr>
@@ -371,12 +373,24 @@ function InventoryManager() {
                     const price = Number(p.price || 0).toFixed(2);
                     const statusClass = p.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700';
                     const statusLabel = p.status === 'active' ? 'Active' : 'Inactive';
+                    const isLow = typeof p.stock === 'number' && p.stock <= 5;
                     return (
-                      <tr key={p._id || idx} className="border-b last:border-0">
-                        <td className="py-3 px-4 text-gray-900 font-medium">{p.name}</td>
+                      <tr key={p._id || idx} className={`border-b last:border-0 ${isLow ? 'bg-red-50/50' : ''}`}>
+                        <td className="py-3 px-4 text-gray-900 font-medium">
+                          <div className="flex items-center gap-2">
+                            <span>{p.name}</span>
+                            {isLow && (
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-700 border border-red-200">
+                                Low stock
+                              </span>
+                            )}
+                          </div>
+                        </td>
                         <td className="py-3 px-4 text-gray-600">{p.brand}</td>
                         <td className="py-3 px-4 text-gray-600">${price}</td>
                         <td className="py-3 px-4 text-gray-600">{p.unit || 'pack'}</td>
+                        <td className={`py-3 px-4 font-semibold ${isLow ? 'text-red-700' : 'text-gray-900'}`}>{p.stock != null ? p.stock : '-'}</td>
+                        <td className="py-3 px-4 text-gray-600">{p.supplierName || p.supplierId || '-'}</td>
                         <td className="py-3 px-4">
                           <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusClass}`}>{statusLabel}</span>
                         </td>

@@ -20,6 +20,13 @@ const Login = () => {
   
 
 
+  // Absolute redirect helper to respect Vite base path
+  const BASE_PATH = '/freshnest-frontend';
+  function redirectToWithBase(path) {
+    const target = `${BASE_PATH}${path}`;
+    window.location.replace(target);
+  }
+
   function handleChange(e) {
     setForm({ ...form, [e.target.name]: e.target.value });
     // Clear error when user starts typing
@@ -92,47 +99,22 @@ const Login = () => {
       setTimeout(() => {
         if (profile && (profile.role === 'admin' || profile.role === 'Admin')) {
           console.log("Redirecting to admin dashboard...");
-          navigate("/admin/dashboard");
-          setTimeout(() => {
-            if (window.location.pathname !== "/admin/dashboard") {
-              window.location.href = "/admin/dashboard";
-            }
-          }, 500);
+          redirectToWithBase("/admin/dashboard");
         } else if (profile && (profile.role === 'retailer' || profile.role === 'Retailer')) {
           console.log("Redirecting to retailer dashboard...");
-          navigate("/retailer/dashboard");
-          setTimeout(() => {
-            if (window.location.pathname !== "/retailer/dashboard") {
-              window.location.href = "/retailer/dashboard";
-            }
-          }, 500);
+          redirectToWithBase("/retailer/dashboard");
         } else if (profile && (profile.role === 'staff' || profile.role === 'Staff')) {
           console.log("Redirecting to staff dashboard...");
-          navigate("/staff/dashboard");
-          setTimeout(() => {
-            if (window.location.pathname !== "/staff/dashboard") {
-              window.location.href = "/staff/dashboard";
-            }
-          }, 500);
+          redirectToWithBase("/staff/dashboard");
         } else if (profile && (profile.role === 'supplier' || profile.role === 'Supplier')) {
           console.log("Redirecting to supplier dashboard...");
-          navigate("/supplier/dashboard");
-          setTimeout(() => {
-            if (window.location.pathname !== "/supplier/dashboard") {
-              window.location.href = "/supplier/dashboard";
-            }
-          }, 500);
+          redirectToWithBase("/supplier/dashboard");
         } else if (profile && (profile.role === 'user' || profile.role === 'User')) {
           console.log("Redirecting to user dashboard...");
-          navigate("/user/dashboard");
-          setTimeout(() => {
-            if (window.location.pathname !== "/user/dashboard") {
-              window.location.href = "/user/dashboard";
-            }
-          }, 500);
+          redirectToWithBase("/user/dashboard");
         } else {
           console.log("Redirecting to home...");
-          navigate("/");
+          redirectToWithBase("/");
         }
       }, 100);
       

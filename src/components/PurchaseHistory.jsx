@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { FiPackage, FiCalendar, FiCreditCard } from 'react-icons/fi';
+import { FiPackage, FiCalendar, FiCreditCard, FiDownload } from 'react-icons/fi';
 import transactionService from '../services/transactionService';
 import { useToastContext } from '../contexts/ToastContext';
+import invoiceService from '../services/invoiceService';
 
 const PurchaseHistory = () => {
   const { error } = useToastContext();
@@ -30,6 +31,34 @@ const PurchaseHistory = () => {
 
   const formatDate = (d) => new Date(d).toLocaleString();
 
+  const downloadInvoice = (tx) => {
+    try {
+      const orderData = {
+        id: tx?.order?.id || tx?.razorpay_order_id || tx?._id,
+        date: tx?.paymentDate || tx?.createdAt || new Date().toISOString(),
+        customer: {
+          name: tx?.customer?.name,
+          email: tx?.customer?.email,
+          phone: tx?.customer?.phone,
+          address: tx?.customer?.address,
+        },
+        items: Array.isArray(tx?.order?.items) ? tx.order.items : [],
+        totalAmount: Number(tx?.order?.totalAmount || 0),
+      };
+
+      const paymentData = {
+        id: tx?.razorpay_payment_id || tx?._id,
+        orderId: tx?.razorpay_order_id || tx?.order?.id,
+        method: tx?.paymentMethod || 'online',
+        status: tx?.status || 'completed',
+      };
+
+      invoiceService.generateInvoice(orderData, paymentData, { download: true });
+    } catch (e) {
+      console.error('Download invoice failed:', e);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="bg-white rounded-2xl border border-gray-200 p-6">
@@ -49,6 +78,14 @@ const PurchaseHistory = () => {
                     <span className={`ml-2 inline-flex px-2 py-0.5 rounded-full text-xs font-semibold ${tx.status === 'completed' ? 'bg-emerald-100 text-emerald-700' : tx.status === 'pending' ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'}`}>{tx.status || 'completed'}</span>
                   </div>
                   <div className="flex items-center space-x-2 text-sm text-gray-500">
+                    <button
+                      onClick={() => downloadInvoice(tx)}
+                      className="mr-3 inline-flex items-center px-2 py-1 rounded-lg border hover:bg-gray-50"
+                      title="Download Invoice"
+                    >
+                      <FiDownload className="w-4 h-4 mr-1" />
+                      Invoice
+                    </button>
                     <FiCalendar className="w-4 h-4" />
                     <span>{formatDate(tx.paymentDate)}</span>
                   </div>
