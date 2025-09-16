@@ -83,6 +83,9 @@ class TransactionService {
   // Get current user's transactions
   async getMyTransactions(params = {}) {
     try {
+      console.log('🔄 TransactionService: Getting my transactions with params:', params);
+      console.log('🔄 TransactionService: API_BASE_URL:', API_BASE_URL);
+      
       const queryParams = new URLSearchParams();
       if (params.page) queryParams.append('page', params.page);
       if (params.limit) queryParams.append('limit', params.limit);
@@ -90,15 +93,29 @@ class TransactionService {
       if (params.paymentMethod) queryParams.append('paymentMethod', params.paymentMethod);
 
       const query = queryParams.toString();
-      const response = await this.apiRequest(`${API_BASE_URL}/api/payments/my/transactions?${query}`);
+      const fullUrl = `${API_BASE_URL}/api/payments/my/transactions?${query}`;
+      console.log('🔄 TransactionService: Making request to:', fullUrl);
+      
+      const response = await this.apiRequest(fullUrl);
+      console.log('🔄 TransactionService: Response status:', response.status);
+      console.log('🔄 TransactionService: Response ok:', response.ok);
+      
       if (!response.ok) {
         const text = await response.text();
+        console.error('❌ TransactionService: API error response:', text);
         throw new Error(text || 'Failed to fetch my transactions');
       }
+      
       const data = await response.json();
+      console.log('✅ TransactionService: Successfully fetched transactions:', data);
       return data;
     } catch (error) {
-      console.error('Get my transactions error:', error);
+      console.error('❌ TransactionService: Get my transactions error:', error);
+      console.error('❌ TransactionService: Error details:', {
+        message: error.message,
+        stack: error.stack,
+        name: error.name
+      });
       throw error;
     }
   }

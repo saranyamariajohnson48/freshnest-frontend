@@ -53,6 +53,7 @@ import {
   FiEye,
   FiSend
 } from 'react-icons/fi';
+import { useAuth } from '../hooks/useAuth';
 import supplierService from '../services/supplierService';
 import { Line, Bar, Doughnut } from 'react-chartjs-2';
 import {
@@ -84,6 +85,7 @@ ChartJS.register(
 );
 
 const AdminDashboard = () => {
+  const { user } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false); // Start closed on mobile
   const [activeSection, setActiveSection] = useState('dashboard');
   const [unreadCount, setUnreadCount] = useState(0);
@@ -912,11 +914,17 @@ const AdminDashboard = () => {
             {/* Profile */}
             <div className="flex items-center space-x-3">
               <div className="w-8 h-8 bg-emerald-600 rounded-full flex items-center justify-center">
-                <span className="text-white font-medium text-xs">SM</span>
+                <span className="text-white font-medium text-xs">
+                  {(user?.fullName || user?.name || user?.email || 'A')
+                    .split(' ')
+                    .map(part => part.charAt(0).toUpperCase())
+                    .slice(0, 2)
+                    .join('')}
+                </span>
               </div>
               <div className="text-right hidden lg:block">
-                <p className="text-sm font-medium text-gray-900">Saranya Maria</p>
-                <p className="text-xs text-gray-500">saranyamariajohnson@mca.ajce.in</p>
+                <p className="text-sm font-medium text-gray-900">{user?.fullName || user?.name || user?.email || 'Admin'}</p>
+                <p className="text-xs text-gray-500">{user?.email || ''}</p>
               </div>
             </div>
           </div>

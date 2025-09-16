@@ -70,6 +70,17 @@ class ProductService {
     if (!response.ok) throw new Error(data.error || 'Failed to delete product');
     return data;
   }
+
+  // Manually trigger low-stock alert to suppliers for a product
+  async sendLowStockAlert(id, { supplierId } = {}) {
+    const response = await this.apiRequest(`${API_BASE_URL}/api/products/${id}/alerts/low-stock`, {
+      method: 'POST',
+      body: JSON.stringify(supplierId ? { supplierId } : {})
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || 'Failed to send low stock alert');
+    return data;
+  }
 }
 
 const productService = new ProductService();

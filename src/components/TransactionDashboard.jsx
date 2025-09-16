@@ -368,7 +368,14 @@ const TransactionDashboard = () => {
                         </div>
                         <div>
                           <div className="text-sm font-medium text-gray-900">
-                            {transaction.customer.name}
+                            {(() => {
+                              const name = transaction.customer?.name?.trim();
+                              const email = transaction.customer?.email || '';
+                              if (!name || name.toLowerCase() === 'john doe' || name.toLowerCase() === 'user') {
+                                return email;
+                              }
+                              return name;
+                            })()}
                           </div>
                           <div className="text-xs text-gray-500">
                             {transaction.customer.email}
@@ -526,7 +533,14 @@ const TransactionDashboard = () => {
                   <div className="space-y-2">
                     <div className="flex justify-between">
                       <span className="text-gray-600">Name:</span>
-                      <span className="font-medium">{selectedTransaction.customer.name}</span>
+                      <span className="font-medium">{(() => {
+                        const name = selectedTransaction.customer?.name?.trim();
+                        const email = selectedTransaction.customer?.email || '';
+                        if (!name || name.toLowerCase() === 'john doe' || name.toLowerCase() === 'user') {
+                          return email;
+                        }
+                        return name;
+                      })()}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-600">Email:</span>

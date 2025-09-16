@@ -754,6 +754,7 @@ class SupplierService {
       contactPerson: userData.supplierDetails?.contactPerson || '',
       address: userData.address || userData.supplierDetails?.address || '',
       category: userData.supplierDetails?.category || 'Other',
+      brands: Array.isArray(userData.supplierDetails?.brands) ? userData.supplierDetails.brands : [],
       paymentTerms: userData.supplierDetails?.paymentTerms || 'Net 30',
       notes: userData.supplierDetails?.notes || '',
       totalOrders: userData.supplierDetails?.totalOrders || 0,

@@ -74,7 +74,15 @@ const UserDashboard = () => {
   const { signOut } = useClerk();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [activeSection, setActiveSection] = useState('overview');
-  const [userEmail] = useState('saranyamariajohnson2026@mca.ajce.in');
+  // Use logged-in user's email from stored auth data
+  const [userEmail, setUserEmail] = useState('');
+  useEffect(() => {
+    try {
+      const storedUser = JSON.parse(localStorage.getItem('freshnest_user') || 'null');
+      const email = storedUser?.email || storedUser?.primaryEmail || '';
+      if (email) setUserEmail(String(email).trim().toLowerCase());
+    } catch (_) {}
+  }, []);
   
   // Shopping cart state
   const [cart, setCart] = useState([]);
@@ -82,6 +90,22 @@ const UserDashboard = () => {
   const [wishlist, setWishlist] = useState([]);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [processingPayment, setProcessingPayment] = useState(false);
+
+  // Persist wishlist per-user
+  useEffect(() => {
+    try {
+      const key = `freshnest_wishlist_${userEmail || 'guest'}`;
+      const saved = JSON.parse(localStorage.getItem(key) || '[]');
+      if (Array.isArray(saved)) setWishlist(saved);
+    } catch (_) {}
+  }, [userEmail]);
+
+  useEffect(() => {
+    try {
+      const key = `freshnest_wishlist_${userEmail || 'guest'}`;
+      localStorage.setItem(key, JSON.stringify(wishlist));
+    } catch (_) {}
+  }, [wishlist, userEmail]);
 
   // Shopping cart functions
   const addToCart = (product, quantity = 1) => {
@@ -127,6 +151,25 @@ const UserDashboard = () => {
         return [...prevWishlist, product];
       }
     });
+  };
+
+  const removeFromWishlist = (productId) => {
+    setWishlist(prev => prev.filter(item => item._id !== productId));
+    success('Removed from wishlist');
+  };
+
+  const moveToCartFromWishlist = (product) => {
+    const isInCart = cart.find(item => item._id === product._id);
+    if (!isInCart) {
+      addToCart(product, 1);
+    }
+    removeFromWishlist(product._id);
+    success('Moved to cart');
+  };
+
+  const clearWishlist = () => {
+    setWishlist([]);
+    success('Wishlist cleared');
   };
 
   const getCartTotal = () => {
@@ -262,10 +305,10 @@ const UserDashboard = () => {
       category: item.category
     })),
     customer: {
-      id: userEmail,
-      name: 'John Doe',
+      id: userEmail || 'guest',
+      name: userEmail || 'User',
       email: userEmail,
-      phone: '+1 (555) 123-4567'
+      phone: ''
     },
     totalAmount: getCartTotal()
   });
@@ -634,6 +677,7 @@ const UserDashboard = () => {
   const menuItems = [
     { id: 'overview', label: 'Overview', icon: FiHome },
     { id: 'shop', label: 'Shop Products', icon: FiShoppingBag },
+    { id: 'wishlist', label: 'Wishlist', icon: FiHeart },
     { id: 'purchases', label: 'My Purchases', icon: FiShoppingCart },
     { id: 'transactions', label: 'Payment History', icon: FiCreditCard },
     { id: 'inventory', label: 'Inventory View', icon: FiPackage },
@@ -907,7 +951,7 @@ const UserDashboard = () => {
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold text-white">Welcome,</p>
-                  <p className="text-xs text-emerald-200 truncate">{userEmail}</p>
+                  <p className="text-xs text-emerald-200 truncate">{userEmail || 'Loading...'}</p>
                 </div>
               </div>
               <div className="bg-emerald-500/20 rounded-lg p-2">
@@ -929,14 +973,21 @@ const UserDashboard = () => {
                 <button
                   key={item.id}
                   onClick={() => setActiveSection(item.id)}
-                  className={`w-full flex items-center px-4 py-4 text-sm font-semibold rounded-2xl transition-all duration-200 ${
+                  className={`w-full flex items-center justify-between px-4 py-4 text-sm font-semibold rounded-2xl transition-all duration-200 ${
                     isActive
                       ? 'bg-white text-emerald-700 shadow-lg scale-105'
                       : 'text-emerald-100 hover:text-white hover:bg-emerald-600/50 hover:scale-105'
                   }`}
                 >
-                  <Icon className="w-5 h-5 mr-4" />
-                  {sidebarOpen && <span className="font-medium">{item.label}</span>}
+                  <div className="flex items-center">
+                    <Icon className="w-5 h-5 mr-4" />
+                    {sidebarOpen && <span className="font-medium">{item.label}</span>}
+                  </div>
+                  {sidebarOpen && item.id === 'wishlist' && wishlist.length > 0 && (
+                    <span className="ml-2 inline-flex items-center justify-center min-w-[1.5rem] h-6 px-2 rounded-full text-xs bg-red-500 text-white">
+                      {wishlist.length}
+                    </span>
+                  )}
                 </button>
               );
             })}
@@ -1127,6 +1178,98 @@ const UserDashboard = () => {
           )}
 
           {activeSection === 'shop' && <Shop />}
+
+          {activeSection === 'wishlist' && (
+            <div className="space-y-6">
+              <div className="bg-white rounded-2xl border border-gray-200 p-6">
+                <div className="flex items-center justify-between mb-6">
+                  <div>
+                    <h3 className="text-2xl font-bold text-gray-900">My Wishlist</h3>
+                    <p className="text-gray-600">Save items you love and purchase later</p>
+                  </div>
+                  {wishlist.length > 0 && (
+                    <button
+                      onClick={clearWishlist}
+                      className="px-4 py-2 rounded-xl border border-gray-200 hover:bg-gray-50 text-sm font-semibold text-gray-700"
+                    >
+                      Clear All
+                    </button>
+                  )}
+                </div>
+
+                {wishlist.length === 0 ? (
+                  <div className="text-center py-16">
+                    <FiHeart className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                    <p className="text-gray-600 text-lg font-medium">Your wishlist is empty</p>
+                    <p className="text-gray-400 mt-1">Tap the heart icon on products to add them</p>
+                    <div className="mt-6">
+                      <button
+                        onClick={() => setActiveSection('shop')}
+                        className="bg-emerald-600 text-white px-6 py-3 rounded-xl hover:bg-emerald-700 font-semibold"
+                      >
+                        Browse Products
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                    {wishlist.map((item) => (
+                      <div key={item._id} className="bg-white rounded-2xl border border-gray-200 p-6 hover:shadow-lg transition-all duration-200">
+                        <div className="relative">
+                          <div className="w-full h-40 bg-gradient-to-br from-rose-50 to-red-50 rounded-xl flex items-center justify-center mb-4">
+                            <FiPackage className="w-12 h-12 text-rose-500" />
+                          </div>
+                          <button
+                            onClick={() => removeFromWishlist(item._id)}
+                            className="absolute top-3 right-3 p-2 rounded-full bg-white/80 text-gray-600 hover:bg-red-100 hover:text-red-600 transition-colors"
+                          >
+                            <FiX className="w-5 h-5" />
+                          </button>
+                        </div>
+
+                        <div className="space-y-3">
+                          <div>
+                            <h4 className="text-lg font-bold text-gray-900">{item.name}</h4>
+                            <p className="text-sm text-gray-500">{item.category}</p>
+                          </div>
+
+                          <div className="flex items-center justify-between">
+                            <p className="text-2xl font-bold text-emerald-600">₹{item.price.toFixed(2)}</p>
+                            <div className="text-right">
+                              <p className="text-xs text-gray-500">Stock: {item.stock}</p>
+                              <div className="flex items-center space-x-1 mt-1">
+                                {[...Array(5)].map((_, i) => (
+                                  <FiStar key={i} className="w-3 h-3 text-yellow-400 fill-current" />
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-2">
+                            <button
+                              onClick={() => moveToCartFromWishlist(item)}
+                              disabled={item.stock === 0}
+                              className="bg-emerald-600 text-white py-2 px-4 rounded-xl hover:bg-emerald-700 transition-colors font-semibold disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
+                            >
+                              <FiShoppingCart className="w-4 h-4" />
+                              <span>{item.stock === 0 ? 'Out of Stock' : 'Move to Cart'}</span>
+                            </button>
+                            <button
+                              onClick={() => removeFromWishlist(item._id)}
+                              className="border border-gray-200 text-gray-700 py-2 px-4 rounded-xl hover:bg-gray-50 transition-colors font-semibold flex items-center justify-center space-x-2"
+                            >
+                              <FiTrash2 className="w-4 h-4" />
+                              <span>Remove</span>
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
 
           {activeSection === 'purchases' && (
             <div className="space-y-6">
@@ -1320,7 +1463,7 @@ const UserDashboard = () => {
         orderData={getOrderData()}
         totalAmount={getCartTotal()}
         customerInfo={{
-          name: 'John Doe',
+          name: userEmail || 'User',
           email: userEmail,
           phone: '+91 98765 43210',
           address: '123 Main St, City, State 12345'

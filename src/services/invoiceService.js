@@ -11,15 +11,15 @@ const formatCurrency = (amount, currencySymbol = '₹') => {
 };
 
 // Public API: generateInvoice(order, payment)
-// - order: { id, date, customer: { name, email, phone, address }, items: [{name, quantity, price}], totalAmount }
-// - payment: { id, method, status }
+// - order: { id, date, customer: { name, email, phone, address }, items: [{name, quantity, price}], totalAmount, currencySymbol? }
+// - payment: { id, method, status, date? }
 // Returns a Blob URL and triggers download by default
 class InvoiceService {
   generateInvoice(orderData, paymentData, options = { download: true }) {
     const doc = new jsPDF({ unit: 'pt', format: 'a4' });
 
-    // Brand/Header band
-    doc.setFillColor(0, 121, 107); // teal-ish
+    // Brand/Header band (teal-like)
+    doc.setFillColor(0, 121, 131);
     doc.rect(0, 0, doc.internal.pageSize.getWidth(), 90, 'F');
     doc.setTextColor('#ffffff');
     doc.setFont('helvetica', 'bold');
@@ -29,9 +29,22 @@ class InvoiceService {
     // Company block (right)
     doc.setFontSize(12);
     const rightX = doc.internal.pageSize.getWidth() - 40;
-    doc.text('FreshNest', rightX, 30, { align: 'right' });
-    doc.text('Warehouse & Grocery', rightX, 48, { align: 'right' });
-    doc.text('support@freshnest.example', rightX, 66, { align: 'right' });
+    const companyName = options?.company?.name || 'FreshNest';
+    const companyLines = [
+      options?.company?.addressLine1,
+      options?.company?.addressLine2,
+      options?.company?.addressLine3,
+    ].filter(Boolean);
+    doc.text(companyName, rightX, 30, { align: 'right' });
+    let cy = 48;
+    if (companyLines.length === 0) {
+      doc.text('Warehouse & Grocery', rightX, cy, { align: 'right' });
+      cy += 18;
+      doc.text('support@freshnest.example', rightX, cy, { align: 'right' });
+      cy += 18;
+    } else {
+      companyLines.forEach((line) => { doc.text(String(line), rightX, cy, { align: 'right' }); cy += 18; });
+    }
 
     // Bill to and meta
     doc.setTextColor('#000000');
@@ -58,7 +71,7 @@ class InvoiceService {
     const metaStartY = 120;
     const meta = [
       ['Invoice #', String(orderData?.id || paymentData?.orderId || Date.now())],
-      ['Date', new Date(orderData?.date || Date.now()).toLocaleDateString()],
+      ['Date', new Date(orderData?.date || paymentData?.date || Date.now()).toLocaleDateString()],
       ['Payment ID', String(paymentData?.id || paymentData?.razorpay_payment_id || '-')],
       ['Payment Method', String(paymentData?.method || 'Online')],
       ['Status', String(paymentData?.status || 'Paid')]
@@ -73,12 +86,12 @@ class InvoiceService {
     });
 
     // Items table
+    const symbol = options?.currencySymbol || orderData?.currencySymbol || '₹';
     const items = (orderData?.items || []).map((it, idx) => ({
       sno: idx + 1,
       description: it.name || it.title || 'Item',
       quantity: it.quantity || 1,
-      price: formatCurrency(it.price || 0),
-      amount: formatCurrency((it.price || 0) * (it.quantity || 1))
+      priceNum: Number(it.price || 0),
     }));
 
     const tableStartY = Math.max(y + 10, 210);
@@ -90,7 +103,13 @@ class InvoiceService {
       head: [[
         'Items', 'Description', 'Quantity', 'Price', 'Amount'
       ]],
-      body: items.map((row) => [row.sno, row.description, String(row.quantity), row.price, row.amount]),
+      body: items.map((row) => [
+        row.sno,
+        row.description,
+        String(row.quantity),
+        formatCurrency(row.priceNum, symbol),
+        formatCurrency(row.priceNum * row.quantity, symbol)
+      ]),
       columnStyles: {
         0: { cellWidth: 60 },
         1: { cellWidth: 240 },
@@ -101,7 +120,8 @@ class InvoiceService {
     });
 
     // Totals box
-    const total = Number(orderData?.totalAmount || items.reduce((t, r) => t + Number((r.amount || '0').replace(/[^\d.]/g, '')), 0));
+    const computedTotal = items.reduce((t, r) => t + (r.priceNum * r.quantity), 0);
+    const total = Number(orderData?.totalAmount ?? computedTotal);
     const subtotal = total; // extend with taxes/discounts if needed
     const afterTableY = doc.lastAutoTable.finalY + 16;
     const boxX = doc.internal.pageSize.getWidth() - 240;
@@ -116,15 +136,30 @@ class InvoiceService {
     totals.forEach((tRow, i) => {
       doc.setFont('helvetica', i === totals.length - 1 ? 'bold' : 'normal');
       doc.text(tRow[0], boxX, afterTableY + i * lineGap);
-      doc.text(formatCurrency(tRow[1]), boxX + 140, afterTableY + i * lineGap, { align: 'right' });
+      doc.text(formatCurrency(tRow[1], symbol), boxX + 140, afterTableY + i * lineGap, { align: 'right' });
     });
 
+    // Big total panel on the right
+    const bigY = afterTableY + totals.length * lineGap + 30;
+    const bigBoxW = 260;
+    const bigBoxH = 70;
+    const bigBoxX = doc.internal.pageSize.getWidth() - bigBoxW - 40;
+    doc.setFillColor(232, 245, 246);
+    doc.rect(bigBoxX, bigY, bigBoxW, bigBoxH, 'F');
+    doc.setTextColor('#000000');
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(12);
+    doc.text('TOTAL', bigBoxX + 16, bigY + 26);
+    doc.setFontSize(26);
+    const totalStr = formatCurrency(total, symbol);
+    doc.text(totalStr, bigBoxX + bigBoxW - 16, bigY + 48, { align: 'right' });
+
     // Notes/footer
-    const notesY = afterTableY + totals.length * lineGap + 24;
+    const notesY = bigY + bigBoxH + 20;
     doc.setFont('helvetica', 'bold');
     doc.text('Notes:', 40, notesY);
     doc.setFont('helvetica', 'normal');
-    const note = 'Thank you for your purchase! For support, contact support@freshnest.example';
+    const note = options?.note || 'Thank you for your purchase! For support, contact support@freshnest.example';
     doc.text(doc.splitTextToSize(note, 360), 40, notesY + 16);
 
     // Footer branding bar
@@ -135,7 +170,7 @@ class InvoiceService {
     doc.setFont('helvetica', 'normal');
     doc.text('Powered by FreshNest', 40, pageH - 24);
 
-    // Save or return blob url
+    // Save
     const fileName = `Invoice_${orderData?.id || paymentData?.id || Date.now()}.pdf`;
     if (options?.download !== false) {
       doc.save(fileName);
@@ -146,6 +181,8 @@ class InvoiceService {
 
 const invoiceService = new InvoiceService();
 export default invoiceService;
+
+
 
 
 

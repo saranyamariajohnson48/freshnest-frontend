@@ -59,6 +59,7 @@ function InventoryManager() {
     supplierId: '',
   });
   const [errors, setErrors] = useState({});
+  const [alertTargetSupplier, setAlertTargetSupplier] = useState({}); // productId -> supplierId
   // Prefill form when editing a product
   const startEdit = (p) => {
     setEditing(p);
@@ -374,6 +375,7 @@ function InventoryManager() {
                     const statusClass = p.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700';
                     const statusLabel = p.status === 'active' ? 'Active' : 'Inactive';
                     const isLow = typeof p.stock === 'number' && p.stock <= 5;
+                    const eligibleSuppliers = suppliers.filter(s => s.category === p.category && (!p.brand || (Array.isArray(s.brands) && s.brands.includes(p.brand))));
                     return (
                       <tr key={p._id || idx} className={`border-b last:border-0 ${isLow ? 'bg-red-50/50' : ''}`}>
                         <td className="py-3 px-4 text-gray-900 font-medium">
@@ -398,6 +400,34 @@ function InventoryManager() {
                           <div className="flex items-center gap-3">
                             <button onClick={() => startEdit(p)} className="text-blue-600 hover:underline text-xs">Edit</button>
                             <button onClick={() => handleDelete(p)} className="text-red-600 hover:underline text-xs">Delete</button>
+                            {isLow && (
+                              <div className="flex items-center gap-2">
+                                <select
+                                  className="border border-gray-300 rounded text-xs py-1 px-1"
+                                  value={alertTargetSupplier[p._id] || ''}
+                                  onChange={(e) => setAlertTargetSupplier({ ...alertTargetSupplier, [p._id]: e.target.value })}
+                                >
+                                  <option value="">All suppliers</option>
+                                  {eligibleSuppliers.map(s => {
+                                    const label = s.brands && s.brands.length ? `${s.name} (${s.brands.join(', ')})` : s.name;
+                                    return <option key={s.id || s._id} value={s.id || s._id}>{label}</option>;
+                                  })}
+                                </select>
+                                <button
+                                  onClick={async () => {
+                                    try {
+                                      const supplierId = alertTargetSupplier[p._id];
+                                      await productService.sendLowStockAlert(p._id, supplierId ? { supplierId } : undefined);
+                                      success('Alert sent');
+                                    } catch (e) {
+                                      error(e.message || 'Failed to send alert');
+                                    }
+                                  }}
+                                  className="text-emerald-700 hover:underline text-xs"
+                                  title="Send low stock alert"
+                                >Send alert</button>
+                              </div>
+                            )}
                           </div>
                         </td>
                       </tr>
