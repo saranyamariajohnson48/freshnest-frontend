@@ -55,6 +55,8 @@ import {
 } from 'react-icons/fi';
 import { useAuth } from '../hooks/useAuth';
 import supplierService from '../services/supplierService';
+import productService from '../services/productService';
+import { getExpiryStatus } from '../utils/expiry';
 import { Line, Bar, Doughnut } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
@@ -100,7 +102,17 @@ const AdminDashboard = () => {
   const [showSupplierOnboarding, setShowSupplierOnboarding] = useState(false);
   const [supplierOnboardingRecipient, setSupplierOnboardingRecipient] = useState('');
   
+  // Inventory alert thresholds
+  const LOW_STOCK_THRESHOLD = Number(import.meta.env.VITE_LOW_STOCK_THRESHOLD || 5);
 
+  // Expiry alerts state
+  const [expiringSoonCount, setExpiringSoonCount] = useState(0);
+  const [expiringSoonSamples, setExpiringSoonSamples] = useState([]);
+  const [expiryToastShown, setExpiryToastShown] = useState(false);
+
+  // Low stock alerts state
+  const [lowStockCount, setLowStockCount] = useState(0);
+  const [lowStockSamples, setLowStockSamples] = useState([]);
   
   // Announcement states
   const [announcements, setAnnouncements] = useState([]);
@@ -243,6 +255,44 @@ const AdminDashboard = () => {
 
     return unsubscribe;
   }, []);
+
+  // Load low-stock and expiring products for admin notifications and toast
+  useEffect(() => {
+    let cancelled = false;
+    const loadInventoryAlerts = async () => {
+      try {
+        const res = await productService.list({ page: 1, limit: 500 });
+        const items = res?.data?.items || [];
+        // Expiry
+        const expiring = items.filter(p => {
+          const { expired, expiringSoon } = getExpiryStatus(p.expiryDate);
+          return expired || expiringSoon;
+        });
+        // Low stock
+        const lowStock = items.filter(p => typeof p.stock === 'number' && p.stock <= LOW_STOCK_THRESHOLD);
+
+        if (cancelled) return;
+        setExpiringSoonCount(expiring.length);
+        setExpiringSoonSamples(expiring.slice(0, 3).map(p => p.name));
+        setLowStockCount(lowStock.length);
+        setLowStockSamples(lowStock.slice(0, 3).map(p => `${p.name} (${p.stock})`));
+
+        // Show a toast only once per session
+        if (!expiryToastShown && (expiring.length > 0 || lowStock.length > 0)) {
+          const parts = [];
+          if (expiring.length > 0) parts.push(`${expiring.length} expiring ≤5 days`);
+          if (lowStock.length > 0) parts.push(`${lowStock.length} low-stock (≤${LOW_STOCK_THRESHOLD})`);
+          toastInfo && toastInfo(`Inventory alerts: ${parts.join(' · ')}`, { duration: 4500 });
+          setExpiryToastShown(true);
+        }
+      } catch (e) {
+        // silent
+      }
+    };
+    loadInventoryAlerts();
+    const id = setInterval(loadInventoryAlerts, 60 * 1000);
+    return () => { cancelled = true; clearInterval(id); };
+  }, [toastInfo, expiryToastShown, LOW_STOCK_THRESHOLD]);
 
   const navigate = useNavigate();
   const { success, error } = useToastContext();
@@ -629,12 +679,13 @@ const AdminDashboard = () => {
 
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: FiHome, badge: null },
-    { id: 'inventory', label: 'Inventory', icon: FiPackage, badge: '23' },
+    { id: 'inventory', label: 'Inventory', icon: FiPackage, badge: lowStockCount ? String(lowStockCount) : null },
     { id: 'orders', label: 'Orders', icon: FiShoppingCart, badge: null },
     { id: 'staff', label: 'Staff', icon: FiUsers, badge: null },
     { id: 'leave-management', label: 'Leave Management', icon: FiCalendar, badge: null },
     { id: 'messages', label: 'Messages', icon: FiMessageSquare, badge: unreadCount ? String(unreadCount) : null },
     { id: 'announcements', label: 'Announcements', icon: FiMessageSquare, badge: announcements.filter(a => a.isActive).length.toString() },
+    { id: 'notifications', label: 'Notifications', icon: FiBell, badge: (expiringSoonCount + lowStockCount) > 0 ? String(expiringSoonCount + lowStockCount) : null },
     { id: 'suppliers', label: 'Suppliers', icon: FiTruck, badge: null },
     { id: 'reports', label: 'Reports', icon: FiBarChart2, badge: null },
   ];
@@ -996,6 +1047,16 @@ const AdminDashboard = () => {
                   changeType="negative"
                   icon={FiPackage}
                   trend="M 0 12 Q 16 8 32 16 T 64 20"
+                />
+
+                {/* Expiring Soon (≤5 days) */}
+                <MetricCard
+                  title="Expiring ≤5 days"
+                  subtitle="Critical"
+                  value={String(expiringSoonCount)}
+                  change={expiringSoonCount > 0 ? 'Action needed' : ''}
+                  changeType={expiringSoonCount > 0 ? 'negative' : 'neutral'}
+                  icon={FiAlertTriangle}
                 />
               </div>
 
@@ -1802,50 +1863,7 @@ const AdminDashboard = () => {
             </div>
           )}
 
-          {activeSection === 'notifications' && (
-            <div className="space-y-8">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h1 className="text-3xl font-bold text-gray-900">Notifications</h1>
-                  <p className="text-gray-600 mt-1">Manage system alerts, messages, and notification preferences.</p>
-                </div>
-                <div className="flex items-center space-x-3">
-                  <button className="bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700 transition-colors">
-                    Mark All Read
-                  </button>
-                </div>
-              </div>
-              
-              <div className="bg-white rounded-2xl border border-gray-200 p-8">
-                <div className="space-y-4">
-                  <div className="flex items-start space-x-4 p-4 bg-red-50 rounded-lg border-l-4 border-red-500">
-                    <FiAlertTriangle className="w-5 h-5 text-red-500 mt-0.5" />
-                    <div>
-                      <h4 className="font-medium text-red-900">Low Stock Alert</h4>
-                      <p className="text-sm text-red-700">Organic Apples are running low (5 units remaining)</p>
-                      <p className="text-xs text-red-600 mt-1">15 minutes ago</p>
-                    </div>
-                  </div>
-                  <div className="flex items-start space-x-4 p-4 bg-green-50 rounded-lg border-l-4 border-green-500">
-                    <FiShoppingCart className="w-5 h-5 text-green-500 mt-0.5" />
-                    <div>
-                      <h4 className="font-medium text-green-900">New Order Received</h4>
-                      <p className="text-sm text-green-700">Order #2847 from John Doe ($298.50)</p>
-                      <p className="text-xs text-green-600 mt-1">1 hour ago</p>
-                    </div>
-                  </div>
-                  <div className="flex items-start space-x-4 p-4 bg-blue-50 rounded-lg border-l-4 border-blue-500">
-                    <FiTruck className="w-5 h-5 text-blue-500 mt-0.5" />
-                    <div>
-                      <h4 className="font-medium text-blue-900">Supplier Delivery</h4>
-                      <p className="text-sm text-blue-700">Fresh vegetables delivery completed</p>
-                      <p className="text-xs text-blue-600 mt-1">3 hours ago</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
+
 
           {/* Settings Section */}
           {activeSection === 'settings' && (
@@ -2134,49 +2152,57 @@ const AdminDashboard = () => {
           {/* Notifications Section */}
           {activeSection === 'notifications' && (
             <div className="space-y-6 lg:space-y-8 pr-[20rem] pl-[20rem]">
-              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-                <div>
-                  <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">Notifications</h1>
-                  <p className="text-gray-600 mt-1 text-sm lg:text-base">Stay updated with system alerts and messages.</p>
-                </div>
-                <div className="flex items-center space-x-3">
-                  <button className="border border-gray-300 text-gray-700 px-3 lg:px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors text-sm lg:text-base">
-                    <span className="hidden sm:inline">Mark All Read</span>
-                    <span className="sm:hidden">Mark Read</span>
-                  </button>
-                </div>
-              </div>
+             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+               <div>
+                 <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">Notifications</h1>
+               </div>
+             </div>
               
               <div className="bg-white rounded-xl border border-gray-200">
                 <div className="p-4 lg:p-6">
-                  <div className="space-y-4">
-                    <div className="flex items-start space-x-3 p-3 bg-blue-50 rounded-lg">
-                      <div className="w-2 h-2 bg-blue-500 rounded-full mt-2"></div>
-                      <div className="flex-1">
-                        <p className="font-medium text-gray-900 text-sm lg:text-base">New order received</p>
-                        <p className="text-sm text-gray-600">Order #2847 from John Doe - $45.99</p>
-                        <p className="text-xs text-gray-500 mt-1">2 minutes ago</p>
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-start space-x-3 p-3 bg-amber-50 rounded-lg">
-                      <div className="w-2 h-2 bg-amber-500 rounded-full mt-2"></div>
-                      <div className="flex-1">
-                        <p className="font-medium text-gray-900 text-sm lg:text-base">Low stock alert</p>
-                        <p className="text-sm text-gray-600">Organic Apples - Only 5 units remaining</p>
-                        <p className="text-xs text-gray-500 mt-1">15 minutes ago</p>
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-start space-x-3 p-3 bg-green-50 rounded-lg">
-                      <div className="w-2 h-2 bg-green-500 rounded-full mt-2"></div>
-                      <div className="flex-1">
-                        <p className="font-medium text-gray-900 text-sm lg:text-base">Payment processed</p>
-                        <p className="text-sm text-gray-600">$298.50 payment confirmed for order #2846</p>
-                        <p className="text-xs text-gray-500 mt-1">1 hour ago</p>
-                      </div>
-                    </div>
-                  </div>
+                 <div className="space-y-4">
+                   {/* Expiring products (≤5 days) */}
+                   {expiringSoonCount > 0 && (
+                     <div className="flex items-start space-x-3 p-3 bg-red-50 rounded-lg">
+                       <div className="w-2 h-2 bg-red-500 rounded-full mt-2" aria-hidden></div>
+                       <div className="flex-1">
+                         <p className="font-medium text-gray-900 text-sm lg:text-base">{expiringSoonCount} product{expiringSoonCount>1?'s':''} expiring within 5 days</p>
+                         {expiringSoonSamples.length > 0 && (
+                           <p className="text-sm text-gray-600">
+                             {expiringSoonSamples.join(', ')}{expiringSoonCount > expiringSoonSamples.length ? ` and ${expiringSoonCount - expiringSoonSamples.length} more` : ''}
+                           </p>
+                         )}
+                         <p className="text-xs text-gray-500 mt-1">Updated just now</p>
+                       </div>
+                     </div>
+                   )}
+
+                   {/* Low-stock (<= threshold) */}
+                   {lowStockCount > 0 && (
+                     <div className="flex items-start space-x-3 p-3 bg-amber-50 rounded-lg">
+                       <div className="w-2 h-2 bg-amber-500 rounded-full mt-2" aria-hidden></div>
+                       <div className="flex-1">
+                         <p className="font-medium text-gray-900 text-sm lg:text-base">{lowStockCount} product{lowStockCount>1?'s':''} low on stock (≤{LOW_STOCK_THRESHOLD})</p>
+                         {lowStockSamples.length > 0 && (
+                           <p className="text-sm text-gray-600">
+                             {lowStockSamples.join(', ')}{lowStockCount > lowStockSamples.length ? ` and ${lowStockCount - lowStockSamples.length} more` : ''}
+                           </p>
+                         )}
+                         <p className="text-xs text-gray-500 mt-1">Calculated from inventory</p>
+                       </div>
+                     </div>
+                   )}
+
+                   {/* Empty state */}
+                   {expiringSoonCount === 0 && lowStockCount === 0 && (
+                     <div className="flex items-center justify-center py-10 text-center">
+                       <div>
+                         <p className="text-gray-900 font-medium">No notifications right now</p>
+                         <p className="text-sm text-gray-500">You’re all caught up. Inventory looks good.</p>
+                       </div>
+                     </div>
+                   )}
+                 </div>
                 </div>
               </div>
             </div>
@@ -2279,6 +2305,21 @@ const AdminDashboard = () => {
                     </div>
                   ) : (
                     <div className="space-y-4">
+                      {/* Expiring products (≤5 days) */}
+                      {expiringSoonCount > 0 && (
+                        <div className="flex items-start space-x-3 p-3 bg-red-50 rounded-lg">
+                          <div className="w-2 h-2 bg-red-500 rounded-full mt-2"></div>
+                          <div className="flex-1">
+                            <p className="font-medium text-gray-900 text-sm lg:text-base">{expiringSoonCount} product{expiringSoonCount>1?'s':''} expiring within 5 days</p>
+                            {expiringSoonSamples.length > 0 && (
+                              <p className="text-sm text-gray-600">
+                                {expiringSoonSamples.join(', ')}{expiringSoonCount > expiringSoonSamples.length ? ` and ${expiringSoonCount - expiringSoonSamples.length} more` : ''}
+                              </p>
+                            )}
+                            <p className="text-xs text-gray-500 mt-1">Updated just now</p>
+                          </div>
+                        </div>
+                      )}
                       {leaves.map((leave) => (
                         <div
                           key={leave._id}

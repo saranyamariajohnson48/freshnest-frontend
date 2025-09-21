@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { FiUpload, FiPlus, FiCheckCircle, FiAlertCircle, FiFilter, FiDownload } from 'react-icons/fi';
+import { FiUpload, FiPlus, FiCheckCircle, FiAlertCircle, FiFilter, FiDownload, FiAlertTriangle } from 'react-icons/fi';
 import productService from '../services/productService';
 import supplierService from '../services/supplierService';
 import { CATEGORY_OPTIONS, getBrandsForCategory } from '../utils/catalog';
+import { getExpiryStatus } from '../utils/expiry';
 
 // Inline selector for categories used within InventoryManager
 function CategorySelectorInline({ onPick, selected }) {
@@ -57,6 +58,7 @@ function InventoryManager() {
     description: '',
     tags: '',
     supplierId: '',
+    expiryDate: '',
   });
   const [errors, setErrors] = useState({});
   const [alertTargetSupplier, setAlertTargetSupplier] = useState({}); // productId -> supplierId
@@ -76,6 +78,7 @@ function InventoryManager() {
       description: p.description || '',
       tags: Array.isArray(p.tags) ? p.tags.join(', ') : (p.tags || ''),
       supplierId: p.supplierId || '',
+      expiryDate: p.expiryDate ? new Date(p.expiryDate).toISOString().split('T')[0] : '',
     });
   };
 
@@ -93,6 +96,21 @@ function InventoryManager() {
   };
 
   useEffect(() => { load(); }, []);
+  // Load suppliers when category changes (also covers edit prefill)
+  useEffect(() => {
+    (async () => {
+      if (form.category) {
+        try {
+          const list = await supplierService.listByCategory(form.category, 'active');
+          setSuppliers(list);
+        } catch {
+          setSuppliers([]);
+        }
+      } else {
+        setSuppliers([]);
+      }
+    })();
+  }, [form.category]);
 
   const validate = () => {
     const v = {};
@@ -105,6 +123,11 @@ function InventoryManager() {
     if (!form.unit) v.unit = 'Unit is required';
     if (!form.brand) v.brand = 'Brand is required';
     if (!form.supplierId) v.supplierId = 'Supplier is required';
+    // Optional expiry: if filled, must be valid future date
+    if (form.expiryDate) {
+      const d = new Date(form.expiryDate);
+      if (isNaN(d.getTime())) v.expiryDate = 'Invalid date';
+    }
 
     // Brand must be in catalog for the selected category
     const allowed = getBrandsForCategory(form.category);
@@ -125,6 +148,8 @@ function InventoryManager() {
         costPrice: form.costPrice ? Number(form.costPrice) : 0,
         stock: form.stock ? Number(form.stock) : 0,
         tags: form.tags ? form.tags.split(',').map(s => s.trim()) : [],
+        // Convert expiryDate to ISO if provided
+        ...(form.expiryDate ? { expiryDate: new Date(form.expiryDate).toISOString() } : {}),
       };
       // Enforce supplier-category match if supplier selected
       if (payload.supplierId) {
@@ -150,7 +175,7 @@ function InventoryManager() {
         await productService.createProduct(payload);
         success('Product added successfully');
       }
-      setForm({ name: '', sku: '', category: '', price: '', costPrice: '', stock: '', unit: 'unit', status: 'active', brand: '', description: '', tags: '' });
+      setForm({ name: '', sku: '', category: '', price: '', costPrice: '', stock: '', unit: 'pack', status: 'active', brand: '', description: '', tags: '', supplierId: '', expiryDate: '' });
       await load();
     } catch (err) {
       error(err.message || 'Failed to save product');
@@ -285,6 +310,17 @@ function InventoryManager() {
             </select>
             {errors.supplierId && <p className="text-red-500 text-xs mt-1">{errors.supplierId}</p>}
           </div>
+          {/* Expiry Date */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Expiry Date</label>
+            <input
+              type="date"
+              className={`border rounded p-2 w-full ${errors.expiryDate ? 'border-red-500' : 'border-gray-300'}`}
+              value={form.expiryDate}
+              onChange={e => { setForm({ ...form, expiryDate: e.target.value }); if (errors.expiryDate) setErrors({ ...errors, expiryDate: '' }); }}
+            />
+            {errors.expiryDate && <p className="text-red-500 text-xs mt-1">{errors.expiryDate}</p>}
+          </div>
           {/* Tags */}
           <div className="md:col-span-2">
             <label className="block text-sm font-medium text-gray-700 mb-1">Tags</label>
@@ -366,6 +402,7 @@ function InventoryManager() {
                     <th className="text-left py-3 px-4 font-medium text-gray-600">Available Stock</th>
                     <th className="text-left py-3 px-4 font-medium text-gray-600">Supplier</th>
                     <th className="text-left py-3 px-4 font-medium text-gray-600">Status</th>
+                    <th className="text-left py-3 px-4 font-medium text-gray-600">Expiry</th>
                     <th className="text-left py-3 px-4 font-medium text-gray-600">Action</th>
                   </tr>
                 </thead>
@@ -395,6 +432,35 @@ function InventoryManager() {
                         <td className="py-3 px-4 text-gray-600">{p.supplierName || p.supplierId || '-'}</td>
                         <td className="py-3 px-4">
                           <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusClass}`}>{statusLabel}</span>
+                        </td>
+                        <td className="py-3 px-4">
+                          {p.expiryDate ? (
+                            <div className="flex items-center gap-2">
+                              {(() => {
+                                const { expired, expiringSoon, within30, daysLeft } = getExpiryStatus(p.expiryDate);
+                                const colorClass = expired ? 'text-red-600' : expiringSoon ? 'text-red-600' : within30 ? 'text-yellow-600' : 'text-gray-700';
+                                return (
+                                  <>
+                                    <span className={`text-xs font-medium ${colorClass}`}>
+                                      {new Date(p.expiryDate).toLocaleDateString()}
+                                    </span>
+                                    {expired && <FiAlertTriangle className="w-4 h-4 text-red-500" />}
+                                    {!expired && expiringSoon && (
+                                      <>
+                                        <FiAlertTriangle className="w-4 h-4 text-red-500" />
+                                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-red-100 text-red-700 border border-red-200">
+                                          {daysLeft <= 0 ? 'Expires today' : `Expiring soon`}
+                                        </span>
+                                      </>
+                                    )}
+                                    {!expired && within30 && <FiAlertTriangle className="w-4 h-4 text-yellow-500" />}
+                                  </>
+                                );
+                              })()}
+                            </div>
+                          ) : (
+                            <span className="text-xs text-gray-400">—</span>
+                          )}
                         </td>
                         <td className="py-3 px-4">
                           <div className="flex items-center gap-3">

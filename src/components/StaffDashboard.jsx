@@ -9,6 +9,8 @@ import announcementService from '../services/announcementService';
 import leaveService from '../services/leaveService';
 import staffService from '../services/staffService';
 import taskService from '../services/taskService';
+import productService from '../services/productService';
+import { getExpiryStatus } from '../utils/expiry';
 import { 
   FiHome, 
   FiClock, 
@@ -44,7 +46,17 @@ import {
   FiTarget,
   FiBarChart2,
   FiMessageSquare,
-  FiFileText
+  FiFileText,
+  FiEdit3,
+  FiPlus,
+  FiSearch,
+  FiFilter,
+  FiTrendingDown,
+  FiAlertTriangle,
+  FiCheckCircle,
+  FiShoppingCart,
+  FiTag,
+  FiBox
 } from 'react-icons/fi';
 
 const StaffDashboard = () => {
@@ -103,6 +115,8 @@ const StaffDashboard = () => {
         return 'p-4 pr-[60rem]'; // Slightly less padding for job card
       case 'tasks':
         return 'p-4 pr-[35rem]'; // Less padding for task management
+      case 'products':
+        return 'p-4 pr-[35rem]'; // Less padding for product management
       case 'leave':
         return 'p-4 pr-[24rem]'; // Less padding for leave management
       case 'messages':
@@ -137,6 +151,61 @@ const StaffDashboard = () => {
     dueDate: '',
     priority: 'Medium'
   });
+
+  // Product management states
+  const [products, setProducts] = useState([]);
+  const [loadingProducts, setLoadingProducts] = useState(false);
+  const [showProductForm, setShowProductForm] = useState(false);
+  const [editingProduct, setEditingProduct] = useState(null);
+  const [productForm, setProductForm] = useState({
+    name: '',
+    sku: '',
+    category: '',
+    description: '',
+    price: '',
+    costPrice: '',
+    stock: '',
+    unit: 'unit',
+    brand: '',
+    barcode: '',
+    tags: '',
+    status: 'active',
+    expiryDate: ''
+  });
+  const [productSearchTerm, setProductSearchTerm] = useState('');
+  const [productFilter, setProductFilter] = useState('all');
+
+  // Inventory alerts for supervisors
+  const LOW_STOCK_THRESHOLD = Number(import.meta.env.VITE_LOW_STOCK_THRESHOLD || 5);
+  const [expiringSoonCount, setExpiringSoonCount] = useState(0);
+  const [expiringSoonSamples, setExpiringSoonSamples] = useState([]);
+  const [lowStockCount, setLowStockCount] = useState(0);
+  const [lowStockSamples, setLowStockSamples] = useState([]);
+
+  // Compute alerts from current products list (keeps in sync with supervisor product view)
+  useEffect(() => {
+    if (!isSupervisor) {
+      setExpiringSoonCount(0);
+      setExpiringSoonSamples([]);
+      setLowStockCount(0);
+      setLowStockSamples([]);
+      return;
+    }
+    try {
+      const items = products || [];
+      const expiring = items.filter(p => {
+        const { expired, expiringSoon } = getExpiryStatus(p.expiryDate);
+        return expired || expiringSoon;
+      });
+      const lowStock = items.filter(p => typeof p.stock === 'number' && p.stock <= LOW_STOCK_THRESHOLD);
+      setExpiringSoonCount(expiring.length);
+      setExpiringSoonSamples(expiring.slice(0, 3).map(p => p.name));
+      setLowStockCount(lowStock.length);
+      setLowStockSamples(lowStock.slice(0, 3).map(p => `${p.name} (${p.stock})`));
+    } catch (e) {
+      // silent
+    }
+  }, [products, isSupervisor, LOW_STOCK_THRESHOLD]);
 
   // Update time every minute
   useEffect(() => {
@@ -207,6 +276,8 @@ const StaffDashboard = () => {
             // Also load tasks assigned to me
             const assigned = await taskService.listTasks({ mine: 'false' });
             setTasksAssignedToMe(assigned.data || []);
+            // Load products for supervisor
+            await loadProducts();
           } catch (e) {
             console.error('Task preload error:', e);
           }
@@ -615,6 +686,113 @@ const StaffDashboard = () => {
     return colors[status] || 'bg-gray-100 text-gray-800';
   };
 
+  // Product management functions
+  const loadProducts = async () => {
+    try {
+      setLoadingProducts(true);
+      const response = await productService.list({ limit: 100 }); // Get more products for management
+      // Backend returns data in response.data.items format
+      setProducts(response.data?.items || []);
+    } catch (error) {
+      console.error('Error loading products:', error);
+      showError('Failed to load products');
+    } finally {
+      setLoadingProducts(false);
+    }
+  };
+
+  const handleProductFormSubmit = async (e) => {
+    e.preventDefault();
+    
+    try {
+      const productData = {
+        ...productForm,
+        price: parseFloat(productForm.price),
+        costPrice: parseFloat(productForm.costPrice) || 0,
+        stock: parseInt(productForm.stock),
+        tags: productForm.tags ? productForm.tags.split(',').map(tag => tag.trim()) : []
+      };
+
+      if (editingProduct) {
+        const response = await productService.updateProduct(editingProduct._id, productData);
+        setProducts(prev => prev.map(p => p._id === editingProduct._id ? response.data : p));
+        showSuccess('Product updated successfully!');
+      } else {
+        const response = await productService.createProduct(productData);
+        setProducts(prev => [response.data, ...prev]);
+        showSuccess('Product created successfully!');
+      }
+      
+      setShowProductForm(false);
+      setEditingProduct(null);
+      setProductForm({
+        name: '',
+        sku: '',
+        category: '',
+        description: '',
+        price: '',
+        costPrice: '',
+        stock: '',
+        unit: 'unit',
+        brand: '',
+        barcode: '',
+        tags: '',
+        status: 'active',
+        expiryDate: ''
+      });
+    } catch (error) {
+      showError(error.message || 'Failed to save product');
+    }
+  };
+
+  const handleEditProduct = (product) => {
+    setEditingProduct(product);
+    setProductForm({
+      name: product.name || '',
+      sku: product.sku || '',
+      category: product.category || '',
+      description: product.description || '',
+      price: product.price?.toString() || '',
+      costPrice: product.costPrice?.toString() || '',
+      stock: product.stock?.toString() || '',
+      unit: product.unit || 'unit',
+      brand: product.brand || '',
+      barcode: product.barcode || '',
+      tags: product.tags?.join(', ') || '',
+      status: product.status || 'active',
+      expiryDate: product.expiryDate ? new Date(product.expiryDate).toISOString().split('T')[0] : ''
+    });
+    setShowProductForm(true);
+  };
+
+  const handleDeleteProduct = async (productId) => {
+    if (window.confirm('Are you sure you want to delete this product?')) {
+      try {
+        await productService.deleteProduct(productId);
+        setProducts(prev => prev.filter(p => p._id !== productId));
+        showSuccess('Product deleted successfully!');
+      } catch (error) {
+        showError(error.message || 'Failed to delete product');
+      }
+    }
+  };
+
+  const filteredProducts = products.filter(product => {
+    const matchesSearch = product.name.toLowerCase().includes(productSearchTerm.toLowerCase()) ||
+                         product.sku.toLowerCase().includes(productSearchTerm.toLowerCase()) ||
+                         product.category.toLowerCase().includes(productSearchTerm.toLowerCase());
+
+    const { expired, expiringSoon, within30 } = getExpiryStatus(product.expiryDate);
+
+    const matchesFilter = productFilter === 'all' || 
+                         (productFilter === 'low-stock' && product.stock < 10) ||
+                         (productFilter === 'active' && product.status === 'active') ||
+                         (productFilter === 'inactive' && product.status === 'inactive') ||
+                         (productFilter === 'expired' && product.expiryDate && (expired || expiringSoon || within30));
+
+    return matchesSearch && matchesFilter;
+  });
+
   // Sidebar navigation items
   const sidebarItems = [
     { id: 'dashboard', label: 'Dashboard', icon: FiHome },
@@ -624,12 +802,13 @@ const StaffDashboard = () => {
     { id: 'salary', label: 'Salary Slips', icon: FiDollarSign },
     { id: 'stock', label: 'Stock Activity', icon: FiPackage },
     { id: 'messages', label: 'Messages', icon: FiMessageSquare, badge: unreadCount ? String(unreadCount) : null },
-    { id: 'notifications', label: 'Notifications', icon: FiBell },
+    { id: 'notifications', label: 'Notifications', icon: FiBell, badge: (expiringSoonCount + lowStockCount) > 0 ? String(expiringSoonCount + lowStockCount) : null },
     { id: 'profile', label: 'My Profile', icon: FiUser }
   ];
 
   if (isSupervisor) {
     sidebarItems.splice(3, 0, { id: 'tasks', label: 'Task Management', icon: FiTarget });
+    sidebarItems.splice(4, 0, { id: 'products', label: 'Product Management', icon: FiPackage });
   }
 
   if (loading) {
@@ -642,6 +821,58 @@ const StaffDashboard = () => {
       </div>
     );
   }
+
+  // Supervisor notifications section UI
+  const renderNotifications = () => (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold text-gray-900">Notifications</h2>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-xl border border-gray-200">
+        <div className="p-4 lg:p-6">
+          <div className="space-y-4">
+            {expiringSoonCount > 0 && (
+              <div className="flex items-start space-x-3 p-3 bg-red-50 rounded-lg">
+                <div className="w-2 h-2 bg-red-500 rounded-full mt-2" aria-hidden></div>
+                <div className="flex-1">
+                  <p className="font-medium text-gray-900 text-sm lg:text-base">{expiringSoonCount} product{expiringSoonCount>1?'s':''} expiring within 5 days</p>
+                  {expiringSoonSamples.length > 0 && (
+                    <p className="text-sm text-gray-600">{expiringSoonSamples.join(', ')}{expiringSoonCount > expiringSoonSamples.length ? ` and ${expiringSoonCount - expiringSoonSamples.length} more` : ''}</p>
+                  )}
+                  <p className="text-xs text-gray-500 mt-1">Updated from inventory</p>
+                </div>
+              </div>
+            )}
+
+            {lowStockCount > 0 && (
+              <div className="flex items-start space-x-3 p-3 bg-amber-50 rounded-lg">
+                <div className="w-2 h-2 bg-amber-500 rounded-full mt-2" aria-hidden></div>
+                <div className="flex-1">
+                  <p className="font-medium text-gray-900 text-sm lg:text-base">{lowStockCount} product{lowStockCount>1?'s':''} low on stock (≤{LOW_STOCK_THRESHOLD})</p>
+                  {lowStockSamples.length > 0 && (
+                    <p className="text-sm text-gray-600">{lowStockSamples.join(', ')}{lowStockCount > lowStockSamples.length ? ` and ${lowStockCount - lowStockSamples.length} more` : ''}</p>
+                  )}
+                  <p className="text-xs text-gray-500 mt-1">Calculated from inventory</p>
+                </div>
+              </div>
+            )}
+
+            {expiringSoonCount === 0 && lowStockCount === 0 && (
+              <div className="flex items-center justify-center py-10 text-center">
+                <div>
+                  <p className="text-gray-900 font-medium">No notifications right now</p>
+                  <p className="text-sm text-gray-500">You’re all caught up. Inventory looks good.</p>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
@@ -758,6 +989,38 @@ const StaffDashboard = () => {
         <main className={`${getMainPadding()}`}>
           {activeSection === 'dashboard' && (
             <div className="space-y-6">
+              {/* Supervisor inventory alerts inline summary */}
+              {isSupervisor && (
+                <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-200">
+                  <div className="space-y-3">
+                    {expiringSoonCount > 0 && (
+                      <div className="flex items-start space-x-3 p-3 bg-red-50 rounded-lg">
+                        <div className="w-2 h-2 bg-red-500 rounded-full mt-2" aria-hidden></div>
+                        <div className="flex-1">
+                          <p className="font-medium text-gray-900 text-sm">{expiringSoonCount} product{expiringSoonCount>1?'s':''} expiring within 5 days</p>
+                          {expiringSoonSamples.length > 0 && (
+                            <p className="text-sm text-gray-600">{expiringSoonSamples.join(', ')}{expiringSoonCount > expiringSoonSamples.length ? ` and ${expiringSoonCount - expiringSoonSamples.length} more` : ''}</p>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                    {lowStockCount > 0 && (
+                      <div className="flex items-start space-x-3 p-3 bg-amber-50 rounded-lg">
+                        <div className="w-2 h-2 bg-amber-500 rounded-full mt-2" aria-hidden></div>
+                        <div className="flex-1">
+                          <p className="font-medium text-gray-900 text-sm">{lowStockCount} product{lowStockCount>1?'s':''} low on stock (≤{LOW_STOCK_THRESHOLD})</p>
+                          {lowStockSamples.length > 0 && (
+                            <p className="text-sm text-gray-600">{lowStockSamples.join(', ')}{lowStockCount > lowStockSamples.length ? ` and ${lowStockCount - lowStockSamples.length} more` : ''}</p>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                    {expiringSoonCount === 0 && lowStockCount === 0 && (
+                      <div className="text-sm text-gray-500">No inventory alerts right now</div>
+                    )}
+                  </div>
+                </div>
+              )}
               {/* Welcome Section */}
               <div className="bg-gradient-to-r from-emerald-600 to-teal-600 rounded-2xl p-6 text-white">
                 <div className="flex items-center justify-between">
@@ -1086,6 +1349,335 @@ const StaffDashboard = () => {
                       )}
                     </div>
                   ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Notifications Section (Supervisor and Staff view) */}
+          {activeSection === 'notifications' && (
+            <div className="space-y-6">
+              {renderNotifications()}
+            </div>
+          )}
+
+          {/* Product Management (Supervisor only) */}
+          {activeSection === 'products' && isSupervisor && (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-900">Product Management</h2>
+                  <p className="text-gray-600">Manage company products, inventory, and pricing</p>
+                </div>
+                <button
+                  onClick={() => {
+                    setEditingProduct(null);
+                    setProductForm({
+                      name: '',
+                      sku: '',
+                      category: '',
+                      description: '',
+                      price: '',
+                      costPrice: '',
+                      stock: '',
+                      unit: 'unit',
+                      brand: '',
+                      barcode: '',
+                      tags: '',
+                      status: 'active',
+                      expiryDate: ''
+                    });
+                    setShowProductForm(true);
+                  }}
+                  className="flex items-center space-x-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors"
+                >
+                  <FiPlus className="w-4 h-4" />
+                  <span>Add Product</span>
+                </button>
+              </div>
+
+              {/* Product Stats Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+                <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-gray-600">Total Products</p>
+                      <p className="text-2xl font-bold text-gray-900">{products.length}</p>
+                    </div>
+                    <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                      <FiPackage className="w-6 h-6 text-blue-600" />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-gray-600">Active Products</p>
+                      <p className="text-2xl font-bold text-green-600">
+                        {products.filter(p => p.status === 'active').length}
+                      </p>
+                    </div>
+                    <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                      <FiCheckCircle className="w-6 h-6 text-green-600" />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-gray-600">Low Stock</p>
+                      <p className="text-2xl font-bold text-red-600">
+                        {products.filter(p => p.stock < 10).length}
+                      </p>
+                    </div>
+                    <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
+                      <FiAlertTriangle className="w-6 h-6 text-red-600" />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-gray-600">Expired/Expiring</p>
+                      <p className="text-2xl font-bold text-orange-600">
+                        {products.filter(p => {
+                          const { expired, expiringSoon, within30 } = getExpiryStatus(p.expiryDate);
+                          return expired || expiringSoon || within30;
+                        }).length}
+                      </p>
+                    </div>
+                    <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
+                      <FiAlertTriangle className="w-6 h-6 text-orange-600" />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-gray-600">Total Value</p>
+                      <p className="text-2xl font-bold text-purple-600">
+                        ₹{products.reduce((sum, p) => sum + (p.price * p.stock), 0).toLocaleString()}
+                      </p>
+                    </div>
+                    <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+                      <FiDollarSign className="w-6 h-6 text-purple-600" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Search and Filter */}
+              <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
+                <div className="flex flex-col md:flex-row gap-4">
+                  <div className="flex-1">
+                    <div className="relative">
+                      <FiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                      <input
+                        type="text"
+                        placeholder="Search products by name, SKU, or category..."
+                        value={productSearchTerm}
+                        onChange={(e) => setProductSearchTerm(e.target.value)}
+                        className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <select
+                      value={productFilter}
+                      onChange={(e) => setProductFilter(e.target.value)}
+                      className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                    >
+                      <option value="all">All Products</option>
+                      <option value="active">Active</option>
+                      <option value="inactive">Inactive</option>
+                      <option value="low-stock">Low Stock</option>
+                      <option value="expired">Expired/Expiring</option>
+                    </select>
+                    <button
+                      onClick={loadProducts}
+                      className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors flex items-center space-x-2"
+                    >
+                      <FiRefreshCw className="w-4 h-4" />
+                      <span>Refresh</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Products Table */}
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-gray-50 border-b border-gray-200">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Product Details
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          SKU & Category
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Pricing
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Stock
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Expiry Date
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Status
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Actions
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {loadingProducts ? (
+                        <tr>
+                          <td colSpan="6" className="px-6 py-12 text-center">
+                            <div className="flex items-center justify-center">
+                              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600"></div>
+                              <span className="ml-2 text-gray-600">Loading products...</span>
+                            </div>
+                          </td>
+                        </tr>
+                      ) : filteredProducts.length === 0 ? (
+                        <tr>
+                          <td colSpan="6" className="px-6 py-12 text-center">
+                            <div className="text-center">
+                              <FiPackage className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                              <p className="text-gray-500">No products found</p>
+                              <p className="text-sm text-gray-400 mt-1">
+                                {productSearchTerm || productFilter !== 'all' 
+                                  ? 'Try adjusting your search or filter criteria'
+                                  : 'Add your first product to get started'
+                                }
+                              </p>
+                            </div>
+                          </td>
+                        </tr>
+                      ) : (
+                        filteredProducts.map((product) => (
+                          <tr key={product._id} className="hover:bg-gray-50">
+                            <td className="px-6 py-4">
+                              <div className="flex items-center">
+                                <div className="w-12 h-12 bg-gradient-to-br from-emerald-100 to-teal-100 rounded-lg flex items-center justify-center mr-4">
+                                  <FiBox className="w-6 h-6 text-emerald-600" />
+                                </div>
+                                <div>
+                                  <div className="text-sm font-medium text-gray-900">{product.name}</div>
+                                  {product.brand && (
+                                    <div className="text-sm text-gray-500">Brand: {product.brand}</div>
+                                  )}
+                                  {product.description && (
+                                    <div className="text-xs text-gray-400 mt-1 max-w-xs truncate">
+                                      {product.description}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-6 py-4">
+                              <div className="text-sm text-gray-900 font-mono">{product.sku}</div>
+                              <div className="text-sm text-gray-500">{product.category}</div>
+                              {product.barcode && (
+                                <div className="text-xs text-gray-400">Barcode: {product.barcode}</div>
+                              )}
+                            </td>
+                            <td className="px-6 py-4">
+                              <div className="text-sm font-medium text-gray-900">₹{product.price?.toLocaleString()}</div>
+                              {product.costPrice > 0 && (
+                                <div className="text-sm text-gray-500">Cost: ₹{product.costPrice?.toLocaleString()}</div>
+                              )}
+                              <div className="text-xs text-gray-400">per {product.unit}</div>
+                            </td>
+                            <td className="px-6 py-4">
+                              <div className="flex items-center">
+                                <div className={`text-sm font-medium ${
+                                  product.stock < 10 ? 'text-red-600' : 
+                                  product.stock < 50 ? 'text-yellow-600' : 'text-green-600'
+                                }`}>
+                                  {product.stock} {product.unit}
+                                </div>
+                                {product.stock < 10 && (
+                                  <FiAlertTriangle className="w-4 h-4 text-red-500 ml-2" />
+                                )}
+                              </div>
+                              <div className="text-xs text-gray-400">
+                                Value: ₹{(product.price * product.stock).toLocaleString()}
+                              </div>
+                            </td>
+                            <td className="px-6 py-4">
+                              {product.expiryDate ? (
+                                <div className="flex items-center">
+                                  {(() => {
+                                    const { expired, expiringSoon, within30, daysLeft } = getExpiryStatus(product.expiryDate);
+                                    const colorClass = expired ? 'text-red-600' : expiringSoon ? 'text-red-600' : within30 ? 'text-yellow-600' : 'text-green-600';
+                                    return (
+                                      <>
+                                        <div className={`text-sm font-medium ${colorClass}`}>
+                                          {new Date(product.expiryDate).toLocaleDateString()}
+                                        </div>
+                                        {expired && (
+                                          <FiAlertTriangle className="w-4 h-4 text-red-500 ml-2" />
+                                        )}
+                                        {!expired && expiringSoon && (
+                                          <>
+                                            <FiAlertTriangle className="w-4 h-4 text-red-500 ml-2" />
+                                            <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded-full bg-red-100 text-red-700 border border-red-200">
+                                              {daysLeft <= 0 ? 'Expires today' : 'Expiring soon'}
+                                            </span>
+                                          </>
+                                        )}
+                                        {!expired && within30 && (
+                                          <FiAlertTriangle className="w-4 h-4 text-yellow-500 ml-2" />
+                                        )}
+                                      </>
+                                    );
+                                  })()}
+                                </div>
+                              ) : (
+                                <div className="text-sm text-gray-400">No expiry</div>
+                              )}
+                            </td>
+                            <td className="px-6 py-4">
+                              <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                                product.status === 'active' 
+                                  ? 'bg-green-100 text-green-800' 
+                                  : 'bg-red-100 text-red-800'
+                              }`}>
+                                {product.status}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4">
+                              <div className="flex items-center space-x-2">
+                                <button
+                                  onClick={() => handleEditProduct(product)}
+                                  className="p-2 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
+                                  title="Edit Product"
+                                >
+                                  <FiEdit3 className="w-4 h-4" />
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteProduct(product._id)}
+                                  className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                  title="Delete Product"
+                                >
+                                  <FiXCircle className="w-4 h-4" />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
                 </div>
               </div>
             </div>
@@ -1747,6 +2339,240 @@ const StaffDashboard = () => {
                   </button>
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Product Form Modal */}
+      {showProductForm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
+          <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-xl font-semibold text-gray-900">
+                  {editingProduct ? 'Edit Product' : 'Add New Product'}
+                </h3>
+                <button
+                  onClick={() => {
+                    setShowProductForm(false);
+                    setEditingProduct(null);
+                  }}
+                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                  <FiX className="w-5 h-5 text-gray-500" />
+                </button>
+              </div>
+
+              <form onSubmit={handleProductFormSubmit} className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Product Name *
+                    </label>
+                    <input
+                      type="text"
+                      value={productForm.name}
+                      onChange={(e) => setProductForm(prev => ({ ...prev, name: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      SKU *
+                    </label>
+                    <input
+                      type="text"
+                      value={productForm.sku}
+                      onChange={(e) => setProductForm(prev => ({ ...prev, sku: e.target.value.toUpperCase() }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 font-mono"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Category *
+                    </label>
+                    <input
+                      type="text"
+                      value={productForm.category}
+                      onChange={(e) => setProductForm(prev => ({ ...prev, category: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Brand
+                    </label>
+                    <input
+                      type="text"
+                      value={productForm.brand}
+                      onChange={(e) => setProductForm(prev => ({ ...prev, brand: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Description
+                  </label>
+                  <textarea
+                    value={productForm.description}
+                    onChange={(e) => setProductForm(prev => ({ ...prev, description: e.target.value }))}
+                    rows={3}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 resize-none"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Selling Price *
+                    </label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={productForm.price}
+                      onChange={(e) => setProductForm(prev => ({ ...prev, price: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Cost Price
+                    </label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={productForm.costPrice}
+                      onChange={(e) => setProductForm(prev => ({ ...prev, costPrice: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Unit *
+                    </label>
+                    <select
+                      value={productForm.unit}
+                      onChange={(e) => setProductForm(prev => ({ ...prev, unit: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                    >
+                      <option value="unit">Unit</option>
+                      <option value="kg">Kilogram</option>
+                      <option value="g">Gram</option>
+                      <option value="lb">Pound</option>
+                      <option value="litre">Litre</option>
+                      <option value="ml">Milliliter</option>
+                      <option value="pack">Pack</option>
+                      <option value="box">Box</option>
+                      <option value="dozen">Dozen</option>
+                      <option value="bundle">Bundle</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Stock Quantity *
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={productForm.stock}
+                      onChange={(e) => setProductForm(prev => ({ ...prev, stock: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Status
+                    </label>
+                    <select
+                      value={productForm.status}
+                      onChange={(e) => setProductForm(prev => ({ ...prev, status: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                    >
+                      <option value="active">Active</option>
+                      <option value="inactive">Inactive</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Barcode
+                    </label>
+                    <input
+                      type="text"
+                      value={productForm.barcode}
+                      onChange={(e) => setProductForm(prev => ({ ...prev, barcode: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Expiry Date
+                    </label>
+                    <input
+                      type="date"
+                      value={productForm.expiryDate}
+                      onChange={(e) => setProductForm(prev => ({ ...prev, expiryDate: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Tags (comma-separated)
+                  </label>
+                  <input
+                    type="text"
+                    value={productForm.tags}
+                    onChange={(e) => setProductForm(prev => ({ ...prev, tags: e.target.value }))}
+                    placeholder="e.g., organic, premium, seasonal"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                  />
+                </div>
+
+                <div className="flex space-x-3 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowProductForm(false);
+                      setEditingProduct(null);
+                    }}
+                    className="flex-1 px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg font-medium transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="flex-1 px-4 py-2 text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg font-medium transition-colors"
+                  >
+                    {editingProduct ? 'Update Product' : 'Create Product'}
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         </div>
