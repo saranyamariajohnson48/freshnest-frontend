@@ -777,6 +777,37 @@ const StaffDashboard = () => {
     }
   };
 
+  const handleInformProduct = (product) => {
+    try {
+      const { expired, expiringSoon } = getExpiryStatus(product.expiryDate);
+      const lowStock = typeof product.stock === 'number' && product.stock <= LOW_STOCK_THRESHOLD;
+      const issues = [];
+      if (lowStock) issues.push(`low stock (${product.stock} ${product.unit || ''})`);
+      if (expired) issues.push('expired');
+      else if (expiringSoon) issues.push('expiring soon');
+
+      const issueText = issues.join(' and ');
+      const title = `Attention: ${product.name} ${issueText ? `- ${issueText}` : ''}`.trim();
+      const descriptionLines = [
+        `Product: ${product.name}${product.sku ? ` (SKU: ${product.sku})` : ''}`,
+        `Current stock: ${product.stock ?? 'N/A'} ${product.unit || ''}`,
+        product.expiryDate ? `Expiry date: ${new Date(product.expiryDate).toLocaleDateString()}` : 'Expiry date: N/A',
+        '',
+        'Action requested: Review and remove/discount expired or near-expiry stock. Replenish low stock as needed.'
+      ];
+
+      setActiveSection('tasks');
+      setShowTaskForm(true);
+      setTaskForm(prev => ({
+        ...prev,
+        title,
+        description: descriptionLines.join('\n'),
+      }));
+    } catch (e) {
+      // No-op
+    }
+  };
+
   const filteredProducts = products.filter(product => {
     const matchesSearch = product.name.toLowerCase().includes(productSearchTerm.toLowerCase()) ||
                          product.sku.toLowerCase().includes(productSearchTerm.toLowerCase()) ||
@@ -1657,6 +1688,15 @@ const StaffDashboard = () => {
                             </td>
                             <td className="px-6 py-4">
                               <div className="flex items-center space-x-2">
+                                {(() => { const { expired, expiringSoon } = getExpiryStatus(product.expiryDate); const lowStock = typeof product.stock === 'number' && product.stock <= LOW_STOCK_THRESHOLD; return (expired || expiringSoon || lowStock); })() && (
+                                  <button
+                                    onClick={() => handleInformProduct(product)}
+                                    className="p-2 text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
+                                    title="Inform via Task"
+                                  >
+                                    <FiSend className="w-4 h-4" />
+                                  </button>
+                                )}
                                 <button
                                   onClick={() => handleEditProduct(product)}
                                   className="p-2 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
