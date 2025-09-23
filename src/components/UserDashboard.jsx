@@ -5,6 +5,8 @@ import authService from '../services/authService';
 import productService from '../services/productService';
 import paymentService from '../services/paymentService';
 import RazorpayStyleGateway from './RazorpayStyleGateway';
+import PaymentSuccessModal from './PaymentSuccessModal';
+import invoiceService from '../services/invoiceService';
 import PurchaseHistory from './PurchaseHistory';
 import TransactionDashboard from './TransactionDashboard';
 import { useToastContext } from '../contexts/ToastContext';
@@ -90,6 +92,9 @@ const UserDashboard = () => {
   const [wishlist, setWishlist] = useState([]);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [processingPayment, setProcessingPayment] = useState(false);
+  const [showPaymentSuccess, setShowPaymentSuccess] = useState(false);
+  const [lastPayment, setLastPayment] = useState(null);
+  const [paidTotal, setPaidTotal] = useState(0);
 
   // Shopping cart functions
   const addToCart = (product, quantity = 1) => {
@@ -151,10 +156,16 @@ const UserDashboard = () => {
   };
 
   const handlePaymentSuccess = (paymentData) => {
-          success('Payment successful! Order placed successfully! 🎉');
-          setCart([]);
-          setCheckoutOpen(false);
-          setProcessingPayment(false);
+    // Capture total before clearing the cart
+    const totalAtPayment = getCartTotal();
+    setPaidTotal(totalAtPayment);
+    
+    success('Payment successful! Order placed successfully! 🎉');
+    setCart([]);
+    setCheckoutOpen(false);
+    setProcessingPayment(false);
+    setLastPayment(paymentData);
+    setShowPaymentSuccess(true);
     console.log('Payment successful:', paymentData);
     
     // Refresh transaction data if we're on the transactions page
@@ -167,10 +178,10 @@ const UserDashboard = () => {
     setActiveSection('purchases');
   };
 
-  const handlePaymentError = (error) => {
-          error(`Payment failed: ${error.message}`);
-          setProcessingPayment(false);
-          console.error('Payment error:', error);
+  const handlePaymentError = (err) => {
+    error(`Payment failed: ${err.message}`);
+    setProcessingPayment(false);
+    console.error('Payment error:', err);
   };
 
   const processOrder = () => {
@@ -1335,6 +1346,39 @@ const UserDashboard = () => {
         }}
         onSuccess={handlePaymentSuccess}
         onError={handlePaymentError}
+      />
+
+      {/* Payment Success Modal */}
+      <PaymentSuccessModal
+        isOpen={showPaymentSuccess}
+        onClose={() => setShowPaymentSuccess(false)}
+        orderNumber={lastPayment?.paymentResponse?.razorpay_order_id?.replace('order_', '')}
+        details={{
+          date: new Date().toLocaleDateString(),
+          method: 'Razorpay',
+          total: `₹${paidTotal.toFixed(2)}`,
+          email: userEmail,
+        }}
+        onViewInvoice={() => {
+          try {
+            const order = {
+              id: lastPayment?.paymentResponse?.razorpay_order_id,
+              date: Date.now(),
+              customer: { name: userEmail || 'User', email: userEmail, phone: '', address: '' },
+              items: getOrderData().items,
+              totalAmount:  getOrderData().totalAmount,
+              currencySymbol: '₹',
+            };
+            const payment = {
+              id: lastPayment?.paymentResponse?.razorpay_payment_id,
+              method: 'Razorpay',
+              status: 'Paid',
+            };
+            invoiceService.generateInvoice(order, payment);
+          } catch (e) {
+            console.error('Invoice error:', e);
+          }
+        }}
       />
     </div>
   );

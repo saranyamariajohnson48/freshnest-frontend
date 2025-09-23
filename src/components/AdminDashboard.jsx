@@ -5,6 +5,7 @@ import authService from '../services/authService';
 import { useToastContext } from '../contexts/ToastContext';
 import AddStaffForm from './AddStaffForm';
 import StaffList from './StaffList';
+import AdminSalary from './AdminSalary';
 import AddSupplierForm from './AddSupplierForm';
 import SupplierList from './SupplierList';
 import tokenManager from '../utils/tokenManager';
@@ -682,6 +683,7 @@ const AdminDashboard = () => {
     { id: 'inventory', label: 'Inventory', icon: FiPackage, badge: lowStockCount ? String(lowStockCount) : null },
     { id: 'orders', label: 'Orders', icon: FiShoppingCart, badge: null },
     { id: 'staff', label: 'Staff', icon: FiUsers, badge: null },
+    { id: 'salary', label: 'Salary', icon: FiDollarSign, badge: null },
     { id: 'leave-management', label: 'Leave Management', icon: FiCalendar, badge: null },
     { id: 'messages', label: 'Messages', icon: FiMessageSquare, badge: unreadCount ? String(unreadCount) : null },
     { id: 'announcements', label: 'Announcements', icon: FiMessageSquare, badge: announcements.filter(a => a.isActive).length.toString() },
@@ -1701,6 +1703,12 @@ const AdminDashboard = () => {
                   </div>
                 </div>
               </div>
+            </div>
+          )}
+
+          {activeSection === 'salary' && (
+            <div className="space-y-8">
+              <AdminSalary />
             </div>
           )}
 

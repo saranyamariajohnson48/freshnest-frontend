@@ -181,6 +181,88 @@ class StaffService {
       throw error;
     }
   }
+
+  // List staff for salary management
+  async getStaffForSalary(params = {}) {
+    try {
+      const queryParams = new URLSearchParams(params);
+      const response = await this.apiRequest(`${API_BASE_URL}/api/salary/staff?${queryParams}`);
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to fetch staff salary list');
+      }
+      return data;
+    } catch (error) {
+      console.error('Get staff for salary error:', error);
+      throw error;
+    }
+  }
+
+  // Pay salary for a staff member with optional deduction
+  async paySalary(staffId, payload) {
+    try {
+      const response = await this.apiRequest(`${API_BASE_URL}/api/salary/staff/${staffId}/pay`, {
+        method: 'POST',
+        body: JSON.stringify(payload)
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to record salary payment');
+      }
+      return data;
+    } catch (error) {
+      console.error('Pay salary error:', error);
+      throw error;
+    }
+  }
+
+  // Get salary history for a staff member
+  async getSalaryHistory(staffId, params = {}) {
+    try {
+      const queryParams = new URLSearchParams(params);
+      const response = await this.apiRequest(`${API_BASE_URL}/api/salary/staff/${staffId}/history?${queryParams}`);
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to fetch salary history');
+      }
+      return data;
+    } catch (error) {
+      console.error('Get salary history error:', error);
+      throw error;
+    }
+  }
+
+  // Get salary history for the authenticated staff
+  async getMySalaryHistory(params = {}) {
+    try {
+      const queryParams = new URLSearchParams(params);
+      const response = await this.apiRequest(`${API_BASE_URL}/api/salary/me/history?${queryParams}`);
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to fetch salary history');
+      }
+      return data;
+    } catch (error) {
+      console.error('Get my salary history error:', error);
+      throw error;
+    }
+  }
+
+  // Admin: list recent salary payments across all staff
+  async getRecentSalaryPayments(params = {}) {
+    try {
+      const queryParams = new URLSearchParams(params);
+      const response = await this.apiRequest(`${API_BASE_URL}/api/salary/recent?${queryParams}`);
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to fetch recent salary payments');
+      }
+      return data;
+    } catch (error) {
+      console.error('Get recent salary payments error:', error);
+      throw error;
+    }
+  }
 }
 
 // Create and export a singleton instance

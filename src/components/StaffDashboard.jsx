@@ -8,6 +8,7 @@ import { useAuth } from '../hooks/useAuth';
 import announcementService from '../services/announcementService';
 import leaveService from '../services/leaveService';
 import staffService from '../services/staffService';
+import invoiceService from '../services/invoiceService';
 import taskService from '../services/taskService';
 import productService from '../services/productService';
 import { getExpiryStatus } from '../utils/expiry';
@@ -105,32 +106,111 @@ const StaffDashboard = () => {
     currentMonth: null,
     recentSlips: []
   });
+  const [salaryHistory, setSalaryHistory] = useState([]);
+  const [loadingSalary, setLoadingSalary] = useState(false);
+  const [salaryFilterMonth, setSalaryFilterMonth] = useState(''); // e.g. 2025-09
+  const [salaryFilterYear, setSalaryFilterYear] = useState(''); // e.g. 2025
+  const [salaryError, setSalaryError] = useState('');
+
+  // Salary slip modal state
+  const [showSalarySlip, setShowSalarySlip] = useState(false);
+  const [activeSlip, setActiveSlip] = useState(null);
+
+  const openSalarySlip = (payment) => {
+    setActiveSlip(payment);
+    setShowSalarySlip(true);
+  };
+
+  const closeSalarySlip = () => {
+    setShowSalarySlip(false);
+    setActiveSlip(null);
+  };
+
+  const downloadSalaryReceipt = (payment) => {
+    try {
+      if (!payment) return;
+      const monthLabel = payment.month || new Date(payment.paidAt || Date.now()).toISOString().slice(0,7);
+      const orderData = {
+        id: payment.paymentId || payment._id || Date.now(),
+        date: payment.paidAt || new Date().toISOString(),
+        customer: {
+          name: user?.fullName || 'Staff Member',
+          email: user?.email || '',
+          phone: user?.phone || '',
+          address: user?.address || ''
+        },
+        items: [
+          { name: `Salary for ${monthLabel}`, quantity: 1, price: Number(payment.paidAmount || 0) }
+        ],
+        totalAmount: Number(payment.paidAmount || 0)
+      };
+      const paymentData = {
+        id: payment.paymentId || '-',
+        orderId: payment._id || '-',
+        method: (payment.paymentMethod || 'Online'),
+        status: 'Paid',
+        date: payment.paidAt || new Date().toISOString()
+      };
+      const note = Number(payment.deductions || 0) > 0
+        ? `Base: ₹${Number(payment.baseSalary||0).toFixed(2)} | Deduction: ₹${Number(payment.deductions||0).toFixed(2)} | Reason: ${payment.deductionReason || '—'}`
+        : `Base: ₹${Number(payment.baseSalary||0).toFixed(2)} | Net Paid: ₹${Number(payment.paidAmount||0).toFixed(2)}`;
+      invoiceService.generateInvoice(orderData, paymentData, { download: true, note });
+    } catch {}
+  };
+
+  const loadSalaryHistory = async () => {
+    try {
+      if (!authUser) return;
+      setLoadingSalary(true);
+      setSalaryError('');
+      // Fetch first 50 records for client-side filter by month/year
+      const data = await staffService.getMySalaryHistory({ page: 1, limit: 50 });
+      const list = data?.payments || [];
+      setSalaryHistory(list);
+      if (list.length > 0) {
+        const latest = list[0];
+        setSalaryData((prev) => ({
+          ...prev,
+          currentMonth: {
+            net: Number(latest.paidAmount || 0),
+            month: latest.month || new Date(latest.paidAt || Date.now()).toLocaleDateString()
+          }
+        }));
+      }
+    } catch (e) {
+      const msg = e?.message || 'Failed to load salary history';
+      setSalaryError(msg);
+      showError(msg);
+    } finally {
+      setLoadingSalary(false);
+    }
+  };
 
   // Function to get appropriate padding for different sections
   const getMainPadding = () => {
     switch (activeSection) {
       case 'dashboard':
-        return 'p-6 pr-[22rem]'; // Full padding for dashboard with cards
+        return 'p-6 pr-[1rem]'; // Full padding for dashboard with cards
       case 'jobcard':
-        return 'p-4 pr-[60rem]'; // Slightly less padding for job card
+        return 'p-4 pr-[1rem]'; // Slightly less padding for job card
       case 'tasks':
-        return 'p-4 pr-[35rem]'; // Less padding for task management
+        return 'p-4 pr-[1rem]'; // Less padding for task management
       case 'products':
-        return 'p-4 pr-[35rem]'; // Less padding for product management
+        return 'p-4 pr-[1rem]'; // Less padding for product management
       case 'leave':
-        return 'p-4 pr-[24rem]'; // Less padding for leave management
+        return 'p-4 pr-[1rem]'; // Less padding for leave management
       case 'messages':
-        return 'p-2 pr-[60rem]'; // Minimal padding for messages
+        return 'p-2 pr-[1rem]'; // Minimal padding for messages
       case 'attendance':
-        return 'p-4 pr-[73rem]'; // Standard padding for attendance
+        return 'p-4 pr-[1rem]'; // Standard padding for attendance
       case 'salary':
-        return 'p-4 pr-[73rem]'; // Standard padding for salary
+        return 'p-4 pr-6'; // Comfortable padding for salary
       case 'profile':
-        return 'p-4 pr-[73rem]'; // Standard padding for profile
+        return 'p-4 pr-[1rem]'; // Standard padding for profile
       case 'notifications':
-        return 'p-2 pr-[74rem]'; // Minimal padding for notifications
+        return 'p-2 pr-[1rem]'; // Minimal padding for notifications
       default:
-        return 'p-6 pr-[22rem]'; // Default padding
+        return 'p-6 pr-[1rem]'; // Default padding
     }
   };
   
@@ -214,6 +294,21 @@ const StaffDashboard = () => {
     }, 60000);
     return () => clearInterval(timer);
   }, []);
+
+  // Load salary history when opening the Salary section
+  useEffect(() => {
+    if (activeSection === 'salary') {
+      loadSalaryHistory();
+    }
+  }, [activeSection]);
+
+  // Prefetch salary history when authUser becomes available/changes
+  useEffect(() => {
+    if (authUser) {
+      // Prefetch to populate dashboard cards and reduce perceived latency
+      loadSalaryHistory();
+    }
+  }, [authUser]);
 
   // Poll chat for unread badge and toast on new incoming messages
   useEffect(() => {
@@ -878,6 +973,183 @@ const StaffDashboard = () => {
               </div>
             )}
 
+          {activeSection === 'salary' && (
+            <div className="space-y-6">
+              <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h2 className="text-xl font-bold text-gray-900">Salary Slips</h2>
+                    <p className="text-sm text-gray-500">View your salary details by month and year</p>
+                  </div>
+                  <FiDollarSign className="w-6 h-6 text-emerald-600" />
+                </div>
+
+                {salaryError && (
+                  <div className="mb-4 p-3 rounded-lg bg-red-50 border border-red-200 text-sm text-red-700">
+                    {salaryError}
+                  </div>
+                )}
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+                  <div className="flex items-center bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-2.5">
+                    <span className="text-sm font-medium text-emerald-700 mr-3">Month</span>
+                    <input
+                      type="month"
+                      value={salaryFilterMonth}
+                      onChange={(e) => setSalaryFilterMonth(e.target.value)}
+                      className="flex-1 bg-transparent outline-none text-gray-800"
+                    />
+                  </div>
+                  <div className="flex items-center bg-blue-50 border border-blue-200 rounded-xl px-4 py-2.5">
+                    <span className="text-sm font-medium text-blue-700 mr-3">Year</span>
+                    <input
+                      type="number"
+                      min="2000"
+                      max="2100"
+                      value={salaryFilterYear}
+                      onChange={(e) => setSalaryFilterYear(e.target.value)}
+                      placeholder="e.g. 2025"
+                      className="flex-1 bg-transparent outline-none text-gray-800"
+                    />
+                  </div>
+                  <div className="flex items-center">
+                    <button
+                      onClick={loadSalaryHistory}
+                      className="w-full px-4 py-2.5 bg-gray-900 text-white rounded-xl font-semibold hover:bg-gray-800"
+                    >
+                      Refresh
+                    </button>
+                  </div>
+                </div>
+
+                <div className="overflow-x-auto border border-gray-200 rounded-xl">
+                  <table className="min-w-full">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="text-left text-xs font-semibold text-gray-500 px-4 py-3">Month</th>
+                        <th className="text-right text-xs font-semibold text-gray-500 px-4 py-3">Base</th>
+                        <th className="text-right text-xs font-semibold text-gray-500 px-4 py-3">Deductions</th>
+                        <th className="text-right text-xs font-semibold text-gray-500 px-4 py-3">Net Paid</th>
+                        <th className="text-left text-xs font-semibold text-gray-500 px-4 py-3">Reason</th>
+                        <th className="text-center text-xs font-semibold text-gray-500 px-4 py-3">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {loadingSalary ? (
+                        <tr>
+                          <td colSpan={6} className="px-4 py-8 text-center text-gray-500">Loading salary slips...</td>
+                        </tr>
+                      ) : (
+                        (() => {
+                          const filtered = salaryHistory.filter(p => {
+                            const monthOk = salaryFilterMonth ? String(p.month || '').startsWith(salaryFilterMonth) : true;
+                            const yearOk = salaryFilterYear ? String(p.month || '').startsWith(`${salaryFilterYear}-`) : true;
+                            return monthOk && yearOk;
+                          });
+                          if (filtered.length === 0) {
+                            return (
+                              <tr>
+                                <td colSpan={6} className="px-4 py-8 text-center text-gray-500">No salary slips found</td>
+                              </tr>
+                            );
+                          }
+                          return filtered.map((p) => {
+                            const deductionClass = Number(p.deductions || 0) > 0 ? 'text-red-700' : 'text-gray-900';
+                            return (
+                              <tr key={p._id} className="border-t border-gray-100">
+                                <td className="px-4 py-3 font-medium text-gray-900">{p.month}</td>
+                                <td className="px-4 py-3 text-right font-semibold text-blue-700">₹{Number(p.baseSalary||0).toLocaleString()}</td>
+                                <td className={`px-4 py-3 text-right font-semibold ${deductionClass}`}>₹{Number(p.deductions||0).toLocaleString()}</td>
+                                <td className="px-4 py-3 text-right font-semibold text-emerald-700">₹{Number(p.paidAmount||0).toLocaleString()}</td>
+                                <td className="px-4 py-3 text-gray-600 text-sm">{p.deductionReason || '—'}</td>
+                                <td className="px-4 py-3 text-center space-x-2">
+                                  <button
+                                    onClick={() => openSalarySlip(p)}
+                                    className="inline-flex items-center px-3 py-1.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50"
+                                  >
+                                    View
+                                  </button>
+                                  <button
+                                    onClick={() => downloadSalaryReceipt(p)}
+                                    className="inline-flex items-center px-3 py-1.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50"
+                                  >
+                                    <FiDownload className="w-4 h-4 mr-1" /> Download
+                                  </button>
+                                </td>
+                              </tr>
+                            );
+                          });
+                        })()
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Salary Slip Modal */}
+              {showSalarySlip && activeSlip && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center">
+                  <div className="absolute inset-0 bg-black/40" onClick={closeSalarySlip}></div>
+                  <div className="relative bg-white w-full max-w-2xl mx-4 rounded-2xl shadow-xl overflow-hidden">
+                    <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+                      <div>
+                        <h3 className="text-lg font-bold text-gray-900">Salary Slip</h3>
+                        <p className="text-sm text-gray-500">{activeSlip.month} • Paid on {new Date(activeSlip.paidAt || activeSlip.createdAt || Date.now()).toLocaleDateString()}</p>
+                        <p className="text-xs text-gray-500 mt-0.5">{activeSlip.staffName || user?.fullName || 'Staff'} • {activeSlip.staffEmail || user?.email || ''}</p>
+                      </div>
+                      <button onClick={closeSalarySlip} className="p-2 rounded-lg text-gray-500 hover:bg-gray-100">
+                        <FiX className="w-5 h-5" />
+                      </button>
+                    </div>
+
+                    <div className="px-6 py-5">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                        <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
+                          <p className="text-xs text-gray-500 mb-1">Month</p>
+                          <p className="font-semibold text-gray-900">{activeSlip.month}</p>
+                        </div>
+                        <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
+                          <p className="text-xs text-gray-500 mb-1">Payment Method</p>
+                          <p className="font-semibold text-gray-900">{(activeSlip.paymentMethod || 'direct').toUpperCase()}</p>
+                        </div>
+                        <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
+                          <p className="text-xs text-gray-500 mb-1">Base Salary</p>
+                          <p className="font-bold text-blue-700">₹{Number(activeSlip.baseSalary||0).toLocaleString()}</p>
+                        </div>
+                        <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
+                          <p className="text-xs text-gray-500 mb-1">Deductions</p>
+                          <p className={`font-bold ${Number(activeSlip.deductions||0)>0?'text-red-700':'text-gray-900'}`}>₹{Number(activeSlip.deductions||0).toLocaleString()}</p>
+                        </div>
+                      </div>
+
+                      <div className="bg-emerald-50 rounded-xl p-4 border border-emerald-200 mb-4">
+                        <div className="flex items-center justify-between">
+                          <p className="text-sm font-medium text-emerald-700">Net Pay</p>
+                          <p className="text-lg font-bold text-emerald-700">₹{Number(activeSlip.paidAmount||0).toLocaleString()}</p>
+                        </div>
+                      </div>
+
+                      {activeSlip.deductionReason && (
+                        <div className="bg-white rounded-xl p-4 border border-gray-200">
+                          <p className="text-xs text-gray-500 mb-1">Deduction Reason</p>
+                          <p className="text-sm text-gray-800">{activeSlip.deductionReason}</p>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex items-center justify-between px-6 py-4 border-t border-gray-200">
+                      <div className="text-xs text-gray-500">Payment ID: {activeSlip.paymentId || '-'}</div>
+                      <div className="space-x-2">
+                        <button onClick={() => downloadSalaryReceipt(activeSlip)} className="px-3 py-2 text-sm rounded-lg border border-gray-300 hover:bg-gray-50">Download PDF</button>
+                        <button onClick={closeSalarySlip} className="px-3 py-2 text-sm rounded-lg bg-gray-900 text-white hover:bg-gray-800">Close</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
             {lowStockCount > 0 && (
               <div className="flex items-start space-x-3 p-3 bg-amber-50 rounded-lg">
                 <div className="w-2 h-2 bg-amber-500 rounded-full mt-2" aria-hidden></div>
@@ -895,7 +1167,7 @@ const StaffDashboard = () => {
               <div className="flex items-center justify-center py-10 text-center">
                 <div>
                   <p className="text-gray-900 font-medium">No notifications right now</p>
-                  <p className="text-sm text-gray-500">You’re all caught up. Inventory looks good.</p>
+                  <p className="text-sm text-gray-500">You're all caught up. Inventory looks good.</p>
                 </div>
               </div>
             )}
