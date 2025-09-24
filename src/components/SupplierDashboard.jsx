@@ -184,9 +184,9 @@ const SupplierDashboard = () => {
       tokenManager.stopAutoRefresh();
       try { await authLogout(); } catch {}
       try { await signOut(); } catch {}
-      window.location.replace('/freshnest-frontend/login');
+      window.location.replace('/login');
     } catch (e) {
-      window.location.replace('/freshnest-frontend/login');
+      window.location.replace('/login');
     }
   };
 

@@ -663,7 +663,7 @@ const StaffDashboard = () => {
       
       // Force redirect immediately
       console.log('🔴 Redirecting to login...');
-      window.location.replace('/freshnest-frontend/login');
+      window.location.replace('/login');
       
     } catch (error) {
       console.error('🔴 Logout error:', error);
@@ -674,7 +674,7 @@ const StaffDashboard = () => {
       tokenManager.stopAutoRefresh();
       
       // Force redirect
-      window.location.replace('/freshnest-frontend/login');
+      window.location.replace('/login');
     }
   };
 

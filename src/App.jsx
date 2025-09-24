@@ -57,7 +57,7 @@ export default function App() {
   return (
     <AuthProvider>
       <ToastProvider>
-        <Router>
+        <Router basename="/">
           <ClerkAuthWrapper>
             <Routes>
           {/* Public Routes */}

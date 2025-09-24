@@ -21,9 +21,8 @@ const Login = () => {
 
 
   // Absolute redirect helper to respect Vite base path
-  const BASE_PATH = '/freshnest-frontend';
   function redirectToWithBase(path) {
-    const target = `${BASE_PATH}${path}`;
+    const target = `${path}`;
     window.location.replace(target);
   }
 

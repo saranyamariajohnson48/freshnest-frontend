@@ -521,7 +521,7 @@ const UserDashboard = () => {
       
       // Delay redirect to show toast
       setTimeout(() => {
-        window.location.replace('/freshnest-frontend/login');
+        window.location.replace('/login');
       }, 1500);
     } catch (err) {
       console.error('Logout error:', err);
@@ -536,7 +536,7 @@ const UserDashboard = () => {
       
       authService.clearAuthData();
       setTimeout(() => {
-        window.location.replace('/freshnest-frontend/login');
+        window.location.replace('/login');
       }, 1500);
     }
   };

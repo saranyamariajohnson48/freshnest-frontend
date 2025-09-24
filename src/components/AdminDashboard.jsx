@@ -321,7 +321,7 @@ const AdminDashboard = () => {
       
       // Delay redirect to show toast
       setTimeout(() => {
-        window.location.replace('/freshnest-frontend/login');
+        window.location.replace('/login');
       }, 1500);
     } catch (err) {
       console.error('Logout error:', err);
@@ -336,7 +336,7 @@ const AdminDashboard = () => {
       
       authService.clearAuthData();
       setTimeout(() => {
-        window.location.replace('/freshnest-frontend/login');
+        window.location.replace('/login');
       }, 1500);
     }
   };
