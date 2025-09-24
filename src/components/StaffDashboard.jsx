@@ -11,6 +11,7 @@ import staffService from '../services/staffService';
 import invoiceService from '../services/invoiceService';
 import taskService from '../services/taskService';
 import productService from '../services/productService';
+import SalaryInvoice from './SalaryInvoice';
 import { getExpiryStatus } from '../utils/expiry';
 import { 
   FiHome, 
@@ -115,6 +116,10 @@ const StaffDashboard = () => {
   // Salary slip modal state
   const [showSalarySlip, setShowSalarySlip] = useState(false);
   const [activeSlip, setActiveSlip] = useState(null);
+  
+  // Salary invoice modal state
+  const [showSalaryInvoice, setShowSalaryInvoice] = useState(false);
+  const [salaryInvoiceData, setSalaryInvoiceData] = useState(null);
 
   const openSalarySlip = (payment) => {
     setActiveSlip(payment);
@@ -124,6 +129,77 @@ const StaffDashboard = () => {
   const closeSalarySlip = () => {
     setShowSalarySlip(false);
     setActiveSlip(null);
+  };
+
+  const generateSalaryInvoice = (payment) => {
+    const invoiceData = {
+      business: {
+        name: 'Freshnest',
+        addressLines: ['123 Business Street', 'City, State 12345'],
+        email: 'admin@freshnest.com',
+        phone: '+1 (555) 123-4567'
+      },
+      invoice: {
+        number: `SAL-${payment._id.slice(-6).toUpperCase()}`,
+        date: new Date().toLocaleDateString('en-IN'),
+        dueDate: new Date().toLocaleDateString('en-IN')
+      },
+      staff: {
+        fullName: user?.fullName || payment.staffName || 'Staff Member',
+        email: user?.email || payment.staffEmail || '',
+        employeeId: user?.employeeId || '',
+        phone: user?.phone || ''
+      },
+      salary: {
+        month: payment.month,
+        baseSalary: Number(payment.baseSalary || 0),
+        deductions: Number(payment.deductions || 0),
+        deductionReason: payment.deductionReason || '',
+        paidAmount: Number(payment.paidAmount || 0)
+      },
+      payment: {
+        paymentId: payment.paymentId || '',
+        paymentMethod: payment.paymentMethod || 'direct',
+        paidAt: payment.paidAt || payment.createdAt
+      },
+      admin: {
+        name: 'Admin User', // You can get this from auth context
+        email: 'admin@freshnest.com'
+      }
+    };
+    
+    setSalaryInvoiceData(invoiceData);
+    setShowSalaryInvoice(true);
+  };
+
+  const downloadSalaryInvoice = () => {
+    if (salaryInvoiceData) {
+      // Create a new window for printing
+      const printWindow = window.open('', '_blank');
+      printWindow.document.write(`
+        <html>
+          <head>
+            <title>Salary Invoice - ${salaryInvoiceData.staff.fullName}</title>
+            <style>
+              body { margin: 0; padding: 0; font-family: system-ui, sans-serif; }
+              @media print { body { margin: 0; } }
+            </style>
+          </head>
+          <body>
+            <div id="invoice-root"></div>
+            <script>
+              // This would need React to be loaded in the print window
+              // For now, we'll use a simpler approach
+            </script>
+          </body>
+        </html>
+      `);
+      
+      // For now, just trigger print on current window
+      setTimeout(() => {
+        window.print();
+      }, 100);
+    }
   };
 
   const downloadSalaryReceipt = (payment) => {
@@ -160,13 +236,19 @@ const StaffDashboard = () => {
 
   const loadSalaryHistory = async () => {
     try {
-      if (!authUser) return;
+      if (!authUser) {
+        console.log('No authUser, skipping salary history load');
+        return;
+      }
+      console.log('Loading salary history for user:', authUser.email);
       setLoadingSalary(true);
       setSalaryError('');
       // Fetch first 50 records for client-side filter by month/year
       const data = await staffService.getMySalaryHistory({ page: 1, limit: 50 });
+      console.log('Salary history data received:', data);
       const list = data?.payments || [];
       setSalaryHistory(list);
+      console.log('Salary history list set:', list);
       if (list.length > 0) {
         const latest = list[0];
         setSalaryData((prev) => ({
@@ -178,6 +260,7 @@ const StaffDashboard = () => {
         }));
       }
     } catch (e) {
+      console.error('Error loading salary history:', e);
       const msg = e?.message || 'Failed to load salary history';
       setSalaryError(msg);
       showError(msg);
@@ -298,6 +381,7 @@ const StaffDashboard = () => {
   // Load salary history when opening the Salary section
   useEffect(() => {
     if (activeSection === 'salary') {
+      console.log('Salary section activated, loading history...');
       loadSalaryHistory();
     }
   }, [activeSection]);
@@ -975,6 +1059,7 @@ const StaffDashboard = () => {
 
           {activeSection === 'salary' && (
             <div className="space-y-6">
+              {console.log('Rendering salary section:', { loadingSalary, salaryError, salaryHistory: salaryHistory.length })}
               <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200">
                 <div className="flex items-center justify-between mb-4">
                   <div>
@@ -989,6 +1074,18 @@ const StaffDashboard = () => {
                     {salaryError}
                   </div>
                 )}
+
+                {/* Debug Info */}
+                <div className="mb-4 p-3 rounded-lg bg-blue-50 border border-blue-200 text-sm">
+                  <div className="font-medium text-blue-800 mb-2">Debug Info:</div>
+                  <div className="text-blue-700">
+                    <div>Loading: {loadingSalary ? 'Yes' : 'No'}</div>
+                    <div>Error: {salaryError || 'None'}</div>
+                    <div>History Count: {salaryHistory.length}</div>
+                    <div>Auth User: {authUser ? authUser.email : 'None'}</div>
+                    <div>Active Section: {activeSection}</div>
+                  </div>
+                </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
                   <div className="flex items-center bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-2.5">
@@ -1049,7 +1146,12 @@ const StaffDashboard = () => {
                           if (filtered.length === 0) {
                             return (
                               <tr>
-                                <td colSpan={6} className="px-4 py-8 text-center text-gray-500">No salary slips found</td>
+                                <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
+                                  {salaryHistory.length === 0 
+                                    ? 'No salary records found. Contact HR if you believe this is an error.' 
+                                    : 'No salary slips found for the selected filters'
+                                  }
+                                </td>
                               </tr>
                             );
                           }
@@ -1067,7 +1169,15 @@ const StaffDashboard = () => {
                                     onClick={() => openSalarySlip(p)}
                                     className="inline-flex items-center px-3 py-1.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50"
                                   >
+                                    <FiEye className="w-4 h-4 mr-1" />
                                     View
+                                  </button>
+                                  <button
+                                    onClick={() => generateSalaryInvoice(p)}
+                                    className="inline-flex items-center px-3 py-1.5 border border-emerald-300 rounded-lg text-sm font-medium text-emerald-700 hover:bg-emerald-50"
+                                  >
+                                    <FiFileText className="w-4 h-4 mr-1" />
+                                    Invoice
                                   </button>
                                   <button
                                     onClick={() => downloadSalaryReceipt(p)}
@@ -1147,6 +1257,7 @@ const StaffDashboard = () => {
                   </div>
                 </div>
               )}
+
             </div>
           )}
 
@@ -2918,6 +3029,46 @@ const StaffDashboard = () => {
                   Yes, Logout
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Salary Invoice Modal - Global */}
+      {showSalaryInvoice && salaryInvoiceData && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-emerald-600 to-emerald-700 px-6 py-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-xl font-bold text-white">Salary Invoice</h3>
+                  <p className="text-emerald-100 text-sm mt-1">{salaryInvoiceData.staff.fullName}</p>
+                  <p className="text-emerald-200 text-xs">{salaryInvoiceData.salary.month}</p>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <button 
+                    onClick={downloadSalaryInvoice}
+                    className="inline-flex items-center px-4 py-2 bg-white/20 hover:bg-white/30 text-white font-semibold rounded-xl transition-colors"
+                  >
+                    <FiDownload className="w-4 h-4 mr-2" />
+                    Print / Save PDF
+                  </button>
+                  <button 
+                    onClick={() => { setShowSalaryInvoice(false); setSalaryInvoiceData(null); }} 
+                    className="text-white/80 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-colors"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Invoice Content */}
+            <div className="overflow-y-auto max-h-[calc(90vh-80px)]">
+              <SalaryInvoice {...salaryInvoiceData} />
             </div>
           </div>
         </div>

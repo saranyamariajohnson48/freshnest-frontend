@@ -5,6 +5,7 @@ import paymentService from '../services/paymentService';
 import RazorpayStyleGateway from './RazorpayStyleGateway';
 import invoiceService from '../services/invoiceService';
 import PaymentSuccessModal from './PaymentSuccessModal';
+import SalaryInvoice from './SalaryInvoice';
 import { useToastContext } from '../contexts/ToastContext';
 
 const monthString = (date = new Date()) => {
@@ -36,6 +37,10 @@ const AdminSalary = () => {
   const [recentPayments, setRecentPayments] = useState([]);
   const [recentLoading, setRecentLoading] = useState(false);
   const [recentError, setRecentError] = useState('');
+  
+  // Salary Invoice state
+  const [showSalaryInvoice, setShowSalaryInvoice] = useState(false);
+  const [salaryInvoiceData, setSalaryInvoiceData] = useState(null);
 
   // Paid Salary Details panel state
   const [detailsStaff, setDetailsStaff] = useState(null);
@@ -58,67 +63,75 @@ const AdminSalary = () => {
     }
   };
 
-  const downloadHistoryInvoice = (s, p) => {
-    try {
-      const orderData = {
-        id: p._id,
-        date: p.paidAt || p.createdAt || new Date().toISOString(),
-        customer: {
-          name: s?.fullName || p.staffName || 'Staff Member',
-          email: s?.email || p.staffEmail || '',
-          phone: s?.phone || '',
-          address: '—'
-        },
-        items: [
-          { name: `Salary for ${p.month || new Date(p.paidAt || Date.now()).toLocaleDateString()}`, quantity: 1, price: Number(p.paidAmount || 0) }
-        ],
-        totalAmount: Number(p.paidAmount || 0)
-      };
-      const paymentData = {
-        id: p.paymentId || '-',
-        orderId: p._id,
-        method: (p.paymentMethod || 'direct'),
-        status: 'Paid',
-        date: p.paidAt || p.createdAt || new Date().toISOString()
-      };
-      const note = Number(p.deductions || 0) > 0
-        ? `Base: ₹${Number(p.baseSalary||0).toFixed(2)} | Deduction: ₹${Number(p.deductions||0).toFixed(2)} | Reason: ${p.deductionReason || '—'}`
-        : `Base: ₹${Number(p.baseSalary||0).toFixed(2)} | Net Paid: ₹${Number(p.paidAmount||0).toFixed(2)}`;
-      invoiceService.generateInvoice(orderData, paymentData, { download: true, note, company: { name: 'FreshNest' } });
-    } catch {}
+  const generateSalaryInvoice = (staff, payment) => {
+    const invoiceData = {
+      business: {
+        name: 'Freshnest',
+        addressLines: ['123 Business Street', 'City, State 12345'],
+        email: 'admin@freshnest.com',
+        phone: '+1 (555) 123-4567'
+      },
+      invoice: {
+        number: `SAL-${payment._id.slice(-6).toUpperCase()}`,
+        date: new Date().toLocaleDateString('en-IN'),
+        dueDate: new Date().toLocaleDateString('en-IN')
+      },
+      staff: {
+        fullName: staff.fullName || payment.staffName || 'Staff Member',
+        email: staff.email || payment.staffEmail || '',
+        employeeId: staff.employeeId || '',
+        phone: staff.phone || ''
+      },
+      salary: {
+        month: payment.month,
+        baseSalary: Number(payment.baseSalary || 0),
+        deductions: Number(payment.deductions || 0),
+        deductionReason: payment.deductionReason || '',
+        paidAmount: Number(payment.paidAmount || 0)
+      },
+      payment: {
+        paymentId: payment.paymentId || '',
+        paymentMethod: payment.paymentMethod || 'direct',
+        paidAt: payment.paidAt || payment.createdAt
+      },
+      admin: {
+        name: 'Admin User', // You can get this from auth context
+        email: 'admin@freshnest.com'
+      }
+    };
+    
+    setSalaryInvoiceData(invoiceData);
+    setShowSalaryInvoice(true);
   };
 
-  const downloadSalaryInvoice = (opts = { download: true }) => {
-    try {
-      const orderData = {
-        id: lastSalaryPayment?.paymentResponse?.razorpay_order_id || Date.now(),
-        date: new Date().toISOString(),
-        customer: {
-          name: (lastPaidStaff?.fullName) || (payModal.staff?.fullName) || 'Staff Member',
-          email: (lastPaidStaff?.email) || (payModal.staff?.email) || '',
-          phone: (lastPaidStaff?.phone) || (payModal.staff?.phone) || '',
-          address: '—'
-        },
-        items: [
-          { name: `Salary for ${month}`, quantity: 1, price: paidAmountAtPayment || paidAmount }
-        ],
-        totalAmount: paidAmountAtPayment || paidAmount,
-      };
-      const paymentData = {
-        id: lastSalaryPayment?.paymentResponse?.razorpay_payment_id || '-',
-        orderId: lastSalaryPayment?.paymentResponse?.razorpay_order_id || '-',
-        method: 'Razorpay',
-        status: 'Paid',
-        date: new Date().toISOString(),
-      };
-      invoiceService.generateInvoice(orderData, paymentData, {
-        download: opts.download !== false,
-        company: { name: 'FreshNest' },
-        note: (parseFloat(deductions || '0') || 0) > 0
-          ? `Base Salary: ₹${parseFloat(baseSalary || '0').toFixed(2)} | Deduction: ₹${(parseFloat(deductions || '0') || 0).toFixed(2)} | Reason: ${deductionReason || '—'}`
-          : `Base Salary: ₹${parseFloat(baseSalary || '0').toFixed(2)} | Net Paid: ₹${(paidAmountAtPayment || paidAmount).toFixed(2)}`,
-      });
-    } catch (_) {}
+  const downloadSalaryInvoice = () => {
+    if (salaryInvoiceData) {
+      // Create a new window for printing
+      const printWindow = window.open('', '_blank');
+      printWindow.document.write(`
+        <html>
+          <head>
+            <title>Salary Invoice - ${salaryInvoiceData.staff.fullName}</title>
+            <style>
+              body { margin: 0; padding: 0; font-family: system-ui, sans-serif; }
+              @media print { body { margin: 0; } }
+            </style>
+          </head>
+          <body>
+            <div id="invoice-root"></div>
+            <script>
+              // This would need React to be loaded in the print window
+              // For now, we'll use a simpler approach
+            </script>
+          </body>
+        </html>
+      `);
+      
+      // For now, just trigger print on current window
+      setTimeout(() => {
+        window.print();
+      }, 100);
+    }
   };
 
   const loadStaff = async () => {
@@ -210,8 +223,20 @@ const AdminSalary = () => {
       setProcessingPayment(false);
       closePay();
       setShowSalarySuccess(true);
-      // Auto-download salary receipt
-      downloadSalaryInvoice({ download: true });
+      
+      // Generate salary invoice for the payment
+      const mockPayment = {
+        _id: paymentData.paymentResponse?.razorpay_order_id || Date.now().toString(),
+        month,
+        baseSalary: parseFloat(baseSalary),
+        deductions: parseFloat(deductions || '0') || 0,
+        deductionReason: deductionReason.trim(),
+        paidAmount: paidAmount,
+        paymentId: paymentData.paymentResponse?.razorpay_payment_id,
+        paymentMethod: 'razorpay',
+        paidAt: new Date().toISOString()
+      };
+      generateSalaryInvoice(payModal.staff, mockPayment);
     } catch (e) {
       error(e.message || 'Failed to record salary payment');
     } finally {
@@ -288,7 +313,7 @@ const AdminSalary = () => {
                     <td className="px-4 py-3 text-right font-semibold text-emerald-700">₹{Number(p.paidAmount||0).toLocaleString()}</td>
                     <td className="px-4 py-3 text-gray-600 text-sm">{new Date(p.paidAt || p.createdAt).toLocaleDateString()}</td>
                     <td className="px-4 py-3 text-center">
-                      <button onClick={() => downloadHistoryInvoice({ fullName: p.staffName, email: p.staffEmail, phone: '' }, p)} className="inline-flex items-center px-3 py-1.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50"><FiDownload className="w-4 h-4 mr-1"/>Invoice</button>
+                      <button onClick={() => generateSalaryInvoice({ fullName: p.staffName, email: p.staffEmail, phone: '' }, p)} className="inline-flex items-center px-3 py-1.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50"><FiDownload className="w-4 h-4 mr-1"/>Invoice</button>
                     </td>
                   </tr>
                 ))
@@ -460,7 +485,7 @@ const AdminSalary = () => {
                         <td className="px-4 py-3 text-gray-600 text-sm">{new Date(p.paidAt || p.createdAt).toLocaleDateString()}</td>
                         <td className="px-4 py-3 text-gray-600 text-sm">{p.paymentId || '-'}</td>
                         <td className="px-4 py-3 text-center">
-                          <button onClick={() => downloadHistoryInvoice(detailsStaff, p)} className="inline-flex items-center px-3 py-1.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50"><FiDownload className="w-4 h-4 mr-1"/>Invoice</button>
+                          <button onClick={() => generateSalaryInvoice(detailsStaff, p)} className="inline-flex items-center px-3 py-1.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50"><FiDownload className="w-4 h-4 mr-1"/>Invoice</button>
                         </td>
                       </tr>
                     ));
@@ -620,8 +645,48 @@ const AdminSalary = () => {
           email: lastPaidStaff?.email || '—',
         }}
         subtitle={`Salary payment for ${lastPaidStaff?.fullName || 'Staff'} — ${month}`}
-        onViewInvoice={() => { downloadSalaryInvoice({ download: true }); setShowSalarySuccess(false); }}
+        onViewInvoice={() => { downloadSalaryInvoice(); setShowSalarySuccess(false); }}
       />
+
+      {/* Salary Invoice Modal */}
+      {showSalaryInvoice && salaryInvoiceData && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-emerald-600 to-emerald-700 px-6 py-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-xl font-bold text-white">Salary Invoice</h3>
+                  <p className="text-emerald-100 text-sm mt-1">{salaryInvoiceData.staff.fullName}</p>
+                  <p className="text-emerald-200 text-xs">{salaryInvoiceData.salary.month}</p>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <button 
+                    onClick={downloadSalaryInvoice}
+                    className="inline-flex items-center px-4 py-2 bg-white/20 hover:bg-white/30 text-white font-semibold rounded-xl transition-colors"
+                  >
+                    <FiDownload className="w-4 h-4 mr-2" />
+                    Print / Save PDF
+                  </button>
+                  <button 
+                    onClick={() => { setShowSalaryInvoice(false); setSalaryInvoiceData(null); }} 
+                    className="text-white/80 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-colors"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Invoice Content */}
+            <div className="overflow-y-auto max-h-[calc(90vh-80px)]">
+              <SalaryInvoice {...salaryInvoiceData} />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

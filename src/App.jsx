@@ -37,6 +37,8 @@ import StaffDashboard from './components/StaffDashboard';
 import SupplierDashboard from './components/SupplierDashboard';
 import ProductSelector from './components/ProductSelector';
 import SupplierOnboardingPublic from './components/SupplierOnboardingPublic';
+import InvoicePreview from './components/InvoicePreview';
+import SalaryInvoicePreview from './components/SalaryInvoicePreview';
 
 function Home() {
   return (
@@ -78,6 +80,8 @@ export default function App() {
           <Route path="/token-debug" element={<TokenDebug />} />
           <Route path="/products/select" element={<ProductSelector />} />
           <Route path="/supplier-onboarding" element={<SupplierOnboardingPublic />} />
+          <Route path="/invoice/preview" element={<InvoicePreview />} />
+          <Route path="/salary-invoice/preview" element={<SalaryInvoicePreview />} />
           
           {/* JWT Protected Routes */}
           <Route path="/dashboard" element={
