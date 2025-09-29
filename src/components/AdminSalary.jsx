@@ -16,6 +16,16 @@ const monthString = (date = new Date()) => {
 
 const AdminSalary = () => {
   const { success, error } = useToastContext();
+  
+  // Predefined deduction reasons
+  const deductionReasons = [
+    { value: 'advance_payment_recovery', label: 'Advance Payment Recovery' },
+    { value: 'late_attendance', label: 'Late Attendance Penalty' },
+    { value: 'absent_days', label: 'Absent Days Deduction' },
+    { value: 'equipment_damage', label: 'Equipment Damage Recovery' },
+    { value: 'loan_deduction', label: 'Personal Loan Deduction' },
+    { value: 'other', label: 'Other (Specify)' }
+  ];
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('active');
   const [page, setPage] = useState(1);
@@ -28,6 +38,8 @@ const AdminSalary = () => {
   const [baseSalary, setBaseSalary] = useState('');
   const [deductions, setDeductions] = useState('');
   const [deductionReason, setDeductionReason] = useState('');
+  const [deductionReasonType, setDeductionReasonType] = useState('');
+  const [customDeductionReason, setCustomDeductionReason] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [processingPayment, setProcessingPayment] = useState(false);
   const [showSalarySuccess, setShowSalarySuccess] = useState(false);
@@ -174,6 +186,8 @@ const AdminSalary = () => {
     setBaseSalary(s.salary ? String(s.salary) : '');
     setDeductions('');
     setDeductionReason('');
+    setDeductionReasonType('');
+    setCustomDeductionReason('');
   };
 
   const closePay = () => setPayModal({ open: false, staff: null });
@@ -190,8 +204,13 @@ const AdminSalary = () => {
       if (!month || !baseSalary) {
         return error('Please select month and enter base salary');
       }
-      if ((parseFloat(deductions || '0') || 0) > 0 && !deductionReason.trim()) {
-        return error('Please provide a reason for the deduction');
+      if ((parseFloat(deductions || '0') || 0) > 0) {
+        if (!deductionReasonType) {
+          return error('Please select a reason for the deduction');
+        }
+        if (deductionReasonType === 'other' && !customDeductionReason.trim()) {
+          return error('Please provide a custom reason for the deduction');
+        }
       }
       
       // Open Razorpay payment gateway
@@ -208,12 +227,17 @@ const AdminSalary = () => {
       setPaidAmountAtPayment(paidAmount);
       setLastPaidStaff(payModal.staff);
       
+      // Prepare deduction reason based on selection
+      const finalDeductionReason = deductionReasonType === 'other' 
+        ? customDeductionReason.trim() 
+        : deductionReasons.find(r => r.value === deductionReasonType)?.label || '';
+
       // Record salary payment after successful payment
       await staffService.paySalary(payModal.staff._id, {
         month,
         baseSalary: parseFloat(baseSalary),
         deductions: parseFloat(deductions || '0') || 0,
-        deductionReason: deductionReason.trim(),
+        deductionReason: finalDeductionReason,
         paymentId: paymentData.paymentResponse?.razorpay_payment_id,
         paymentMethod: 'razorpay'
       });
@@ -230,7 +254,7 @@ const AdminSalary = () => {
         month,
         baseSalary: parseFloat(baseSalary),
         deductions: parseFloat(deductions || '0') || 0,
-        deductionReason: deductionReason.trim(),
+        deductionReason: finalDeductionReason,
         paidAmount: paidAmount,
         paymentId: paymentData.paymentResponse?.razorpay_payment_id,
         paymentMethod: 'razorpay',
@@ -572,13 +596,53 @@ const AdminSalary = () => {
               {(parseFloat(deductions || '0') || 0) > 0 && (
                 <div>
                   <label className="block text-sm font-semibold text-gray-800 mb-2">Reason for Deduction</label>
-                  <textarea 
-                    value={deductionReason} 
-                    onChange={(e) => setDeductionReason(e.target.value)} 
-                    rows={3} 
-                    className="w-full bg-red-50 border-2 border-red-200 rounded-xl px-4 py-3 text-gray-800 font-medium focus:border-red-400 transition-colors resize-none" 
-                    placeholder="Please provide a clear reason for the salary deduction..."
-                  />
+                  <div className="space-y-3">
+                    {/* Dropdown for predefined reasons */}
+                    <div className="flex items-center bg-red-50 border-2 border-red-200 rounded-xl px-4 py-3 focus-within:border-red-400 transition-colors">
+                      <FiMinusCircle className="w-5 h-5 text-red-600 mr-3" />
+                      <select
+                        value={deductionReasonType}
+                        onChange={(e) => setDeductionReasonType(e.target.value)}
+                        className="flex-1 bg-transparent outline-none text-gray-800 font-medium"
+                      >
+                        <option value="">Select a reason for deduction</option>
+                        {deductionReasons.map((reason) => (
+                          <option key={reason.value} value={reason.value}>
+                            {reason.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    
+                    {/* Custom reason text field - only show when "Other" is selected */}
+                    {deductionReasonType === 'other' && (
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Custom Reason</label>
+                        <textarea 
+                          value={customDeductionReason} 
+                          onChange={(e) => setCustomDeductionReason(e.target.value)} 
+                          rows={2} 
+                          className="w-full bg-red-50 border-2 border-red-200 rounded-xl px-4 py-3 text-gray-800 font-medium focus:border-red-400 transition-colors resize-none" 
+                          placeholder="Please specify the reason for the salary deduction..."
+                        />
+                      </div>
+                    )}
+                    
+                    {/* Professional contact message */}
+                    <div className="bg-blue-50 border border-blue-200 rounded-xl p-3">
+                      <div className="flex items-start space-x-2">
+                        <div className="w-5 h-5 text-blue-600 mt-0.5">
+                          <svg className="w-full h-full" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                          </svg>
+                        </div>
+                        <div className="text-sm text-blue-800">
+                          <p className="font-medium">Need clarification about this deduction?</p>
+                          <p className="text-blue-600 mt-1">Please contact HR within 24 hours for any queries regarding this salary deduction. We're here to help!</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               )}
 

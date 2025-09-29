@@ -41,6 +41,7 @@ import {
   FiCreditCard,
   FiTrash2
 } from 'react-icons/fi';
+import { getExpiryStatus } from '../utils/expiry';
 import { Line, Bar, Doughnut } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
@@ -306,6 +307,14 @@ const UserDashboard = () => {
         
         const response = await productService.publicList(params);
         let products = response?.data?.items || [];
+        
+        // Additional frontend filter to remove expired/expiring products
+        products = products.filter(product => {
+          if (!product.expiryDate) return true; // Keep products without expiry date
+          
+          const { expired, expiringSoon } = getExpiryStatus(product.expiryDate);
+          return !expired && !expiringSoon; // Remove expired and expiring products
+        });
         
         // Sort products
         products.sort((a, b) => {
@@ -729,7 +738,16 @@ const UserDashboard = () => {
         // If user lacks admin role, backend public endpoint will still allow read access
         const res = await productService.publicList(params);
         // Backend returns { success, data: { items, pagination } }
-        const apiItems = res?.data?.items || [];
+        let apiItems = res?.data?.items || [];
+        
+        // Additional frontend filter to remove expired/expiring products
+        apiItems = apiItems.filter(product => {
+          if (!product.expiryDate) return true; // Keep products without expiry date
+          
+          const { expired, expiringSoon } = getExpiryStatus(product.expiryDate);
+          return !expired && !expiringSoon; // Remove expired and expiring products
+        });
+        
         const pagination = res?.data?.pagination || { pages: 1 };
         setItems(apiItems);
         setTotalPages(pagination.pages || 1);
