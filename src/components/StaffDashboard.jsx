@@ -945,14 +945,12 @@ const StaffDashboard = () => {
   };
 
   const handleDeleteProduct = async (productId) => {
-    if (window.confirm('Are you sure you want to delete this product?')) {
-      try {
-        await productService.deleteProduct(productId);
-        setProducts(prev => prev.filter(p => p._id !== productId));
-        showSuccess('Product deleted successfully!');
-      } catch (error) {
-        showError(error.message || 'Failed to delete product');
-      }
+    try {
+      setProducts(prev => prev.filter(p => p._id !== productId));
+      await productService.deleteProduct(productId);
+      showSuccess('Product deleted successfully!');
+    } catch (error) {
+      showError(error.message || 'Failed to delete product');
     }
   };
 

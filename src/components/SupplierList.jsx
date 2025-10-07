@@ -140,18 +140,16 @@ const SupplierList = ({ onAddSupplier, refreshTrigger }) => {
   };
 
   const handleDelete = async (supplier) => {
-    if (window.confirm(`Are you sure you want to delete ${supplier.name}?`)) {
-      try {
-        const removedId = supplier.id || supplier._id;
-        await supplierService.deleteSupplier(removedId);
-        success('Supplier deleted successfully');
-        // Optimistically remove from UI without full reload
-        setSuppliers(prev => prev.filter(s => (s.id || s._id) !== removedId));
-        setFilteredSuppliers(prev => prev.filter(s => (s.id || s._id) !== removedId));
-      } catch (err) {
-        console.error('Error deleting supplier:', err);
-        error('Failed to delete supplier');
-      }
+    try {
+      const removedId = supplier.id || supplier._id;
+      await supplierService.deleteSupplier(removedId);
+      success('Supplier deleted successfully');
+      // Optimistically remove from UI without full reload
+      setSuppliers(prev => prev.filter(s => (s.id || s._id) !== removedId));
+      setFilteredSuppliers(prev => prev.filter(s => (s.id || s._id) !== removedId));
+    } catch (err) {
+      console.error('Error deleting supplier:', err);
+      error('Failed to delete supplier');
     }
     setShowDropdown(null);
   };

@@ -469,12 +469,10 @@ const AdminDashboard = () => {
   };
 
   const handleDeleteAnnouncement = (announcementId) => {
-    if (window.confirm('Are you sure you want to delete this announcement?')) {
-      if (announcementService.deleteAnnouncement(announcementId)) {
-        success('Announcement deleted successfully');
-      } else {
-        error('Failed to delete announcement');
-      }
+    if (announcementService.deleteAnnouncement(announcementId)) {
+      success('Announcement deleted successfully');
+    } else {
+      error('Failed to delete announcement');
     }
   };
 
@@ -2701,8 +2699,7 @@ const AdminDashboard = () => {
                   <div className="flex space-x-3 pt-4 border-t border-gray-200">
                     <button
                       onClick={() => {
-                        const comments = prompt('Add review comments (optional):');
-                        handleReviewLeave(selectedLeave._id, 'rejected', comments || '');
+                        handleReviewLeave(selectedLeave._id, 'rejected', '');
                       }}
                       className="flex-1 px-4 py-2 text-red-600 bg-red-50 hover:bg-red-100 rounded-lg font-medium transition-colors"
                     >
@@ -2710,8 +2707,7 @@ const AdminDashboard = () => {
                     </button>
                     <button
                       onClick={() => {
-                        const comments = prompt('Add review comments (optional):');
-                        handleReviewLeave(selectedLeave._id, 'approved', comments || '');
+                        handleReviewLeave(selectedLeave._id, 'approved', '');
                       }}
                       className="flex-1 px-4 py-2 text-white bg-green-600 hover:bg-green-700 rounded-lg font-medium transition-colors"
                     >

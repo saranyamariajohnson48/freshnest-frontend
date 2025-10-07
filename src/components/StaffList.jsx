@@ -78,10 +78,6 @@ const StaffList = ({ onAddStaff, refreshTrigger }) => {
 
   // Delete/Deactivate staff
   const handleDeleteStaff = async (staffId, staffName, permanent = false) => {
-    if (!confirm(`Are you sure you want to ${permanent ? 'permanently delete' : 'deactivate'} ${staffName}?`)) {
-      return;
-    }
-
     try {
       await staffService.deleteStaff(staffId, permanent);
       success(`Staff member ${permanent ? 'permanently deleted' : 'deactivated'} successfully`);
@@ -95,10 +91,6 @@ const StaffList = ({ onAddStaff, refreshTrigger }) => {
 
   // Reset staff password
   const handleResetPassword = async (staffId, staffName) => {
-    if (!confirm(`Reset password for ${staffName}? A new password will be generated and displayed.`)) {
-      return;
-    }
-
     try {
       const data = await staffService.resetStaffPassword(staffId);
       

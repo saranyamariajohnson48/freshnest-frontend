@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
+import { useToastContext } from '../contexts/ToastContext';
 
 const fieldCls = "w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors";
 
 const SupplierOnboardingPublic = () => {
+  const { error, success } = useToastContext();
   const [form, setForm] = useState({
     companyName: '', supplierType: 'company', contactPerson: '', email: '', phone: '', address: '',
     gstNumber: '', tradeLicenseNo: '', bankAccountNumber: '', bankNameIfsc: '', identityProofType: '', identityProofUrl: '',
@@ -27,8 +29,9 @@ const SupplierOnboardingPublic = () => {
       });
       if (!res.ok) throw new Error('Failed');
       setDone(true);
+      success('Application submitted successfully');
     } catch (err) {
-      alert('Submission failed. Please try again later.');
+      error('Submission failed. Please try again later.');
     } finally {
       setSubmitting(false);
     }

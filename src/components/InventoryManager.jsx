@@ -198,7 +198,6 @@ function InventoryManager() {
   };
 
   const handleDelete = async (product) => {
-    if (!window.confirm(`Delete ${product.name}?`)) return;
     try {
       await productService.deleteProduct(product._id);
       success('Product deleted');
