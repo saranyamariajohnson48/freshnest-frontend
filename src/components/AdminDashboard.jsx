@@ -89,6 +89,7 @@ ChartJS.register(
 
 const AdminDashboard = () => {
   const { user, loading: authLoading } = useAuth();
+  const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false); // Start closed on mobile
   const [activeSection, setActiveSection] = useState('dashboard');
   const [unreadCount, setUnreadCount] = useState(0);
@@ -320,7 +321,6 @@ const AdminDashboard = () => {
     return () => { cancelled = true; clearInterval(id); };
   }, [toastInfo, expiryToastShown, LOW_STOCK_THRESHOLD, isLoading]);
 
-  const navigate = useNavigate();
   const { success, error } = useToastContext();
   const { signOut } = useClerk();
 

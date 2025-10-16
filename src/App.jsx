@@ -41,6 +41,7 @@ import InvoicePreview from './components/InvoicePreview';
 import SalaryInvoicePreview from './components/SalaryInvoicePreview';
 import AuthTest from './components/AuthTest';
 import AdminDebug from './components/AdminDebug';
+import ErrorBoundary from './components/ErrorBoundary';
 
 function Home() {
   return (
@@ -57,11 +58,12 @@ function Home() {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <ToastProvider>
-        <Router basename="/">
-          <ClerkAuthWrapper>
-            <Routes>
+    <ErrorBoundary>
+      <AuthProvider>
+        <ToastProvider>
+          <Router basename='/' >
+            <ClerkAuthWrapper>
+              <Routes>
           {/* Public Routes */}
           <Route path="/" element={<Home />} />
           <Route path="/login" element={<Login />} />
@@ -127,10 +129,11 @@ export default function App() {
 
           {/* Legacy route for testing */}
           <Route path="/admin/test" element={<AdminTestPage />} />
-            </Routes>
-          </ClerkAuthWrapper>
-        </Router>
-      </ToastProvider>
-    </AuthProvider>
+              </Routes>
+            </ClerkAuthWrapper>
+          </Router>
+        </ToastProvider>
+      </AuthProvider>
+    </ErrorBoundary>
   );
 }
