@@ -39,6 +39,8 @@ import ProductSelector from './components/ProductSelector';
 import SupplierOnboardingPublic from './components/SupplierOnboardingPublic';
 import InvoicePreview from './components/InvoicePreview';
 import SalaryInvoicePreview from './components/SalaryInvoicePreview';
+import AuthTest from './components/AuthTest';
+import AdminDebug from './components/AdminDebug';
 
 function Home() {
   return (
@@ -82,6 +84,8 @@ export default function App() {
           <Route path="/supplier-onboarding" element={<SupplierOnboardingPublic />} />
           <Route path="/invoice/preview" element={<InvoicePreview />} />
           <Route path="/salary-invoice/preview" element={<SalaryInvoicePreview />} />
+          <Route path="/auth-test" element={<AuthTest />} />
+          <Route path="/admin-debug" element={<AdminDebug />} />
           
           {/* JWT Protected Routes */}
           <Route path="/dashboard" element={

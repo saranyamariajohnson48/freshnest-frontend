@@ -23,18 +23,61 @@ class AuthService {
 
   // Get access token
   getAccessToken() {
-    // Try new token key first, then fallback to old 'token' key for backward compatibility
-    return localStorage.getItem(this.tokenKey) || localStorage.getItem('token');
+    // Try new token key first
+    let token = localStorage.getItem(this.tokenKey);
+    
+    // If not found, try to migrate from old key
+    if (!token) {
+      const oldToken = localStorage.getItem('token');
+      if (oldToken) {
+        console.log('🔄 Migrating access token from old localStorage key');
+        localStorage.setItem(this.tokenKey, oldToken);
+        token = oldToken;
+        // Clean up old key
+        localStorage.removeItem('token');
+      }
+    }
+    
+    return token;
   }
 
   // Get refresh token
   getRefreshToken() {
-    return localStorage.getItem(this.refreshTokenKey);
+    // Try new key first
+    let refreshToken = localStorage.getItem(this.refreshTokenKey);
+    
+    // If not found, try to migrate from old key
+    if (!refreshToken) {
+      const oldRefreshToken = localStorage.getItem('refreshToken');
+      if (oldRefreshToken) {
+        console.log('🔄 Migrating refresh token from old localStorage key');
+        localStorage.setItem(this.refreshTokenKey, oldRefreshToken);
+        refreshToken = oldRefreshToken;
+        // Clean up old key
+        localStorage.removeItem('refreshToken');
+      }
+    }
+    
+    return refreshToken;
   }
 
   // Get user data
   getUser() {
-    const userData = localStorage.getItem(this.userKey);
+    // Try new key first
+    let userData = localStorage.getItem(this.userKey);
+    
+    // If not found, try to migrate from old key
+    if (!userData) {
+      const oldUserData = localStorage.getItem('user');
+      if (oldUserData) {
+        console.log('🔄 Migrating user data from old localStorage key');
+        localStorage.setItem(this.userKey, oldUserData);
+        userData = oldUserData;
+        // Clean up old key
+        localStorage.removeItem('user');
+      }
+    }
+    
     return userData ? JSON.parse(userData) : null;
   }
 
@@ -337,6 +380,41 @@ class AuthService {
   // Check if user is regular user
   isRegularUser() {
     return this.hasRole('user');
+  }
+
+  // Migration function to move old localStorage keys to new ones
+  migrateOldKeys() {
+    console.log('🔄 Checking for old localStorage keys to migrate...');
+    
+    const migrations = [
+      { old: 'token', new: this.tokenKey },
+      { old: 'refreshToken', new: this.refreshTokenKey },
+      { old: 'user', new: this.userKey }
+    ];
+    
+    let migrated = false;
+    
+    migrations.forEach(({ old, new: newKey }) => {
+      const oldValue = localStorage.getItem(old);
+      const newValue = localStorage.getItem(newKey);
+      
+      if (oldValue && !newValue) {
+        console.log(`🔄 Migrating ${old} to ${newKey}`);
+        localStorage.setItem(newKey, oldValue);
+        localStorage.removeItem(old);
+        migrated = true;
+      }
+    });
+    
+    if (migrated) {
+      console.log('✅ Migration completed successfully');
+      // Trigger storage event to notify components
+      window.dispatchEvent(new Event('storage'));
+    } else {
+      console.log('ℹ️ No migration needed - all keys are up to date');
+    }
+    
+    return migrated;
   }
 }
 

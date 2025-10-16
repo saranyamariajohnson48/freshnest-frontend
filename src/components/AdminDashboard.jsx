@@ -88,12 +88,14 @@ ChartJS.register(
 );
 
 const AdminDashboard = () => {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false); // Start closed on mobile
   const [activeSection, setActiveSection] = useState('dashboard');
   const [unreadCount, setUnreadCount] = useState(0);
   const [timeRange, setTimeRange] = useState('7d');
   const { info: toastInfo } = useToastContext();
+  const [isLoading, setIsLoading] = useState(true);
+  const [apiError, setApiError] = useState(null);
   const [showAddStaffForm, setShowAddStaffForm] = useState(false);
   const [staffRefreshTrigger, setStaffRefreshTrigger] = useState(0);
   
@@ -167,6 +169,26 @@ const AdminDashboard = () => {
       tokenManager.stopAutoRefresh();
     };
   }, []);
+
+  // Check authentication and user role
+  useEffect(() => {
+    if (authLoading) return;
+    
+    if (!user) {
+      console.error('No user found, redirecting to login');
+      navigate('/login');
+      return;
+    }
+    
+    if (user.role !== 'admin' && user.role !== 'Admin') {
+      console.error('User does not have admin role:', user.role);
+      navigate('/login');
+      return;
+    }
+    
+    // Set loading to false after auth checks
+    setIsLoading(false);
+  }, [user, authLoading, navigate]);
 
   // Poll chat for unread badge and toast on new incoming messages
   useEffect(() => {
@@ -259,6 +281,8 @@ const AdminDashboard = () => {
 
   // Load low-stock and expiring products for admin notifications and toast
   useEffect(() => {
+    if (isLoading) return; // Don't load data until auth is complete
+    
     let cancelled = false;
     const loadInventoryAlerts = async () => {
       try {
@@ -287,13 +311,14 @@ const AdminDashboard = () => {
           setExpiryToastShown(true);
         }
       } catch (e) {
-        // silent
+        console.error('Failed to load inventory alerts:', e);
+        setApiError('Failed to load inventory data. Please check your connection.');
       }
     };
     loadInventoryAlerts();
     const id = setInterval(loadInventoryAlerts, 60 * 1000);
     return () => { cancelled = true; clearInterval(id); };
-  }, [toastInfo, expiryToastShown, LOW_STOCK_THRESHOLD]);
+  }, [toastInfo, expiryToastShown, LOW_STOCK_THRESHOLD, isLoading]);
 
   const navigate = useNavigate();
   const { success, error } = useToastContext();
@@ -785,6 +810,41 @@ const AdminDashboard = () => {
       <p className="text-xs lg:text-sm text-gray-400">{description}</p>
     </div>
   );
+
+  // Show loading spinner while checking authentication
+  if (authLoading || isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-slate-600 font-medium">Loading admin dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state if API fails
+  if (apiError) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
+        <div className="max-w-md mx-auto text-center bg-white rounded-2xl shadow-xl p-8">
+          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+            </svg>
+          </div>
+          <h1 className="text-2xl font-bold text-slate-800 mb-2">Connection Error</h1>
+          <p className="text-slate-600 mb-4">{apiError}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="bg-emerald-600 text-white px-6 py-2 rounded-lg hover:bg-emerald-700 transition-colors"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="h-screen bg-gray-50 flex overflow-hidden">

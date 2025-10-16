@@ -59,20 +59,43 @@ export const useClerkGoogleAuth = () => {
 
           const data = await response.json();
           
-          // Store tokens
-          localStorage.setItem('token', data.token);
-          localStorage.setItem('refreshToken', data.refreshToken);
-          localStorage.setItem('user', JSON.stringify(data.user));
+          // Store tokens using consistent authService keys
+          localStorage.setItem('freshnest_access_token', data.token);
+          localStorage.setItem('freshnest_refresh_token', data.refreshToken);
+          localStorage.setItem('freshnest_user', JSON.stringify(data.user));
+          
+          // Also calculate and store token expiry (assuming 1 hour expiry)
+          const expiryTime = Date.now() + (60 * 60 * 1000); // 1 hour from now
+          localStorage.setItem('freshnest_token_expiry', expiryTime.toString());
+
+          console.log('✅ Authentication successful:', data.user);
+
+          // Trigger a storage event to notify other components
+          window.dispatchEvent(new Event('storage'));
 
           // Show success message
           success(`Welcome ${data.user.fullName}! Redirecting to dashboard...`, { duration: 3000 });
 
           // Redirect based on user role
           setTimeout(() => {
-            if (data.user.role === 'retailer') {
+            if (data.user.role === 'admin' || data.user.role === 'Admin') {
+              console.log('Redirecting to admin dashboard');
+              navigate('/admin/dashboard');
+            } else if (data.user.role === 'retailer' || data.user.role === 'Retailer') {
+              console.log('Redirecting to retailer dashboard');
               navigate('/retailer/dashboard');
+            } else if (data.user.role === 'staff' || data.user.role === 'Staff') {
+              console.log('Redirecting to staff dashboard');
+              navigate('/staff/dashboard');
+            } else if (data.user.role === 'supplier' || data.user.role === 'Supplier') {
+              console.log('Redirecting to supplier dashboard');
+              navigate('/supplier/dashboard');
+            } else if (data.user.role === 'user' || data.user.role === 'User') {
+              console.log('Redirecting to user dashboard');
+              navigate('/user/dashboard');
             } else {
-              navigate('/dashboard');
+              console.log('Redirecting to user dashboard (default)');
+              navigate('/user/dashboard'); // Default to user dashboard
             }
             setIsProcessing(false);
           }, 1000);

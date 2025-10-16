@@ -86,11 +86,18 @@ export const useClerkAuth = () => {
         throw new Error('Invalid response from server - missing token or user data');
       }
 
-      // Store the JWT token
-      localStorage.setItem('token', data.token);
-      localStorage.setItem('user', JSON.stringify(data.user));
+      // Store the JWT token using consistent authService keys
+      localStorage.setItem('freshnest_access_token', data.token);
+      localStorage.setItem('freshnest_user', JSON.stringify(data.user));
+      
+      // Also calculate and store token expiry (assuming 1 hour expiry)
+      const expiryTime = Date.now() + (60 * 60 * 1000); // 1 hour from now
+      localStorage.setItem('freshnest_token_expiry', expiryTime.toString());
 
       console.log('Google sign-in successful, user role:', data.user.role);
+
+      // Trigger a storage event to notify other components
+      window.dispatchEvent(new Event('storage'));
 
       // Show success message
       success(`Welcome ${data.user?.fullName || data.user?.email}! 🎉`, {
@@ -108,12 +115,15 @@ export const useClerkAuth = () => {
         } else if (data.user && (data.user.role === 'staff' || data.user.role === 'Staff')) {
           console.log('Redirecting to staff dashboard');
           navigate("/staff/dashboard");
+        } else if (data.user && (data.user.role === 'supplier' || data.user.role === 'Supplier')) {
+          console.log('Redirecting to supplier dashboard');
+          navigate("/supplier/dashboard");
         } else if (data.user && (data.user.role === 'user' || data.user.role === 'User')) {
           console.log('Redirecting to user dashboard');
           navigate("/user/dashboard");
         } else {
-          console.log('Redirecting to home');
-          navigate("/");
+          console.log('Redirecting to user dashboard (default)');
+          navigate("/user/dashboard"); // Default to user dashboard
         }
       }, 100);
 

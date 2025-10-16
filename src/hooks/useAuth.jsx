@@ -14,6 +14,9 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const initializeAuth = async () => {
       try {
+        // Run migration first to ensure consistent localStorage keys
+        authService.migrateOldKeys();
+        
         // Check if we have a token
         const token = authService.getAccessToken();
         const userData = authService.getUser();
